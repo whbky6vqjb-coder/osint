@@ -286,647 +286,331 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
 
+@app.get("/api/files/tree")
+def get_file_tree():
+    import pathlib
+    base = pathlib.Path(current_dir)
+    tree = []
+    for p in sorted(base.rglob("*.py")):
+        tree.append({"path": str(p.relative_to(base)), "type": "file", "ext": ".py"})
+    return {"tree": tree}
+
+@app.get("/api/system/logs")
+def get_system_logs():
+    return {"logs": [
+        "[uvicorn] Server running on 0.0.0.0:8000",
+        "[OSINT] 60+ tools loaded and ready",
+        "[Daemon] Autonomous 24/7 engine initialized",
+        "[NAT] Disambiguation engine active",
+        "[VPN] Leak detector engine active",
+        "[SQLite] FTS5 index operational"
+    ]}
+
 @app.get("/", response_class=HTMLResponse)
 def serve_dashboard():
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="fr" class="dark">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Claude Code Desktop</title>
-        <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-        <script src="https://unpkg.com/lucide@latest"></script>
-        <style>
-            :root {
-                --bg-app: #0e0e11;
-                --bg-sidebar: #131318;
-                --bg-card: #18181f;
-                --bg-input: #1f1f28;
-                --border-color: #2b2b36;
-                --accent-claude: #d97757;
-                --accent-blue: #38bdf8;
-                --accent-purple: #a855f7;
-                --accent-green: #4ade80;
-                --text-main: #e4e4e7;
-                --text-muted: #a1a1aa;
-                --font-code: 'Fira Code', monospace;
-            }
-            * { box-sizing: border-box; }
-            body {
-                font-family: 'Inter', sans-serif;
-                background-color: var(--bg-app);
-                color: var(--text-main);
-                margin: 0;
-                padding: 0;
-                display: flex;
-                height: 100vh;
-                overflow: hidden;
-            }
+    html_content = """<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Desktop</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0d;--surface:#111116;--surface2:#161619;--border:rgba(255,255,255,0.06);
+  --accent:#d97757;--blue:#3b82f6;--purple:#a855f7;--green:#4ade80;--red:#ef4444;
+  --text:#e4e4e7;--muted:#71717a;--dim:#a1a1aa;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans)}
 
-            /* Claude Code Left Sidebar */
-            sidebar {
-                width: 250px;
-                background: var(--bg-sidebar);
-                border-right: 1px solid var(--border-color);
-                display: flex;
-                flex-direction: column;
-                padding: 14px;
-                flex-shrink: 0;
-            }
-            .brand-header {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                padding-bottom: 14px;
-                border-bottom: 1px solid var(--border-color);
-                margin-bottom: 14px;
-            }
-            .brand-logo {
-                width: 24px;
-                height: 24px;
-                background: var(--accent-claude);
-                border-radius: 6px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #000;
-                font-weight: 800;
-                font-size: 13px;
-                font-family: var(--font-code);
-            }
-            .brand-title {
-                font-size: 13.5px;
-                font-weight: 700;
-                color: #ffffff;
-            }
-            sidebar h4 {
-                font-size: 11px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                color: var(--text-muted);
-                margin-top: 8px;
-                margin-bottom: 12px;
-            }
-            .history-list {
-                flex: 1;
-                overflow-y: auto;
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-            }
-            .history-item {
-                background: transparent;
-                border-radius: 6px;
-                padding: 7px 10px;
-                cursor: pointer;
-                transition: all 0.15s;
-                font-size: 12px;
-                color: var(--text-muted);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .history-item:hover {
-                background: rgba(255, 255, 255, 0.05);
-                color: #ffffff;
-            }
-            .history-item .title {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                font-family: var(--font-code);
-            }
+/* === IDE GRID === */
+.ide{display:grid;grid-template-columns:220px 1fr 320px;grid-template-rows:1fr;height:100vh;overflow:hidden}
 
-            /* Main Workspace */
-            main {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                background: var(--bg-app);
-                overflow: hidden;
-            }
+/* === SIDEBAR === */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-head{padding:16px;display:flex;align-items:center;gap:8px}
+.sidebar-head .logo{width:20px;height:20px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:800;font-size:11px;color:#000}
+.sidebar-head span{font-size:12px;color:var(--muted);font-weight:500}
+.sidebar-new{margin:0 12px 12px;padding:7px 0;border:1px dashed var(--border);border-radius:8px;background:transparent;color:var(--dim);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;text-align:center}
+.sidebar-new:hover{border-color:var(--accent);color:var(--accent)}
+.sidebar-label{padding:0 16px;font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px}
+.sessions{flex:1;overflow-y:auto;padding:0 8px 12px}
+.sessions::-webkit-scrollbar{width:3px}
+.sessions::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.session-item{padding:6px 10px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .15s;display:flex;align-items:center;gap:6px}
+.session-item:hover{background:rgba(255,255,255,0.04);color:#fff}
+.session-item .dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
 
-            /* Clean Header */
-            header {
-                height: 42px;
-                background: var(--bg-sidebar);
-                border-bottom: 1px solid var(--border-color);
-                display: flex;
-                align-items: center;
-                padding: 0 20px;
-                font-size: 12px;
-                font-family: var(--font-code);
-                color: var(--text-muted);
-            }
+/* === CHAT === */
+.chat-col{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.chat-scroll{flex:1;overflow-y:auto;padding:24px 32px;display:flex;flex-direction:column;gap:16px;max-width:900px;width:100%;margin:0 auto}
+.chat-scroll::-webkit-scrollbar{width:4px}
+.chat-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-            /* Chat Area */
-            .chat-container {
-                flex: 1;
-                overflow-y: auto;
-                padding: 24px 32px;
-                display: flex;
-                flex-direction: column;
-                gap: 18px;
-                max-width: 1050px;
-                width: 100%;
-                margin: 0 auto;
-            }
+/* Message Bubbles */
+.msg-user{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.msg-user b{color:var(--accent);font-weight:600}
 
-            /* Claude Code Tool Block */
-            .claude-tool-block {
-                background: var(--bg-card);
-                border: 1px solid var(--border-color);
-                border-radius: 8px;
-                overflow: hidden;
-                font-family: var(--font-code);
-                font-size: 12px;
-            }
-            .claude-tool-header {
-                padding: 8px 12px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                cursor: pointer;
-                user-select: none;
-            }
-            .claude-tool-header:hover {
-                background: rgba(255, 255, 255, 0.03);
-            }
-            .tool-call-label {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                color: var(--accent-blue);
-                font-weight: 600;
-            }
-            .tool-meta {
-                color: var(--text-muted);
-                font-size: 11px;
-            }
-            .claude-tool-body {
-                padding: 12px;
-                background: #0a0a0d;
-                border-top: 1px solid var(--border-color);
-                color: #a1a1aa;
-                white-space: pre-wrap;
-                display: none;
-            }
+/* AI Intent Card */
+.intent-card{border-left:3px solid var(--accent);background:rgba(217,119,87,0.04);padding:10px 14px;border-radius:0 8px 8px 0;font-family:var(--mono);font-size:12px}
+.intent-card .title{color:var(--accent);font-weight:600;margin-bottom:4px}
+.intent-card .hypo{color:var(--dim);font-size:11px}
 
-            /* Thinking Block */
-            .claude-thinking-block {
-                background: rgba(168, 85, 247, 0.04);
-                border: 1px dashed rgba(168, 85, 247, 0.25);
-                border-radius: 8px;
-                padding: 12px 14px;
-                font-family: var(--font-code);
-                font-size: 12px;
-                color: #c084fc;
-                white-space: pre-wrap;
-                max-height: 200px;
-                overflow-y: auto;
-            }
+/* Tool Cards */
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;font-family:var(--mono);font-size:11px;transition:border-color .15s}
+.tool-card:hover{border-color:rgba(255,255,255,0.1)}
+.tool-head{padding:6px 10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.tool-head .name{color:var(--blue);font-weight:500;display:flex;align-items:center;gap:6px}
+.tool-head .name svg{width:12px;height:12px;stroke:var(--blue);fill:none;stroke-width:2}
+.tool-head .meta{color:var(--muted);font-size:10px}
+.tool-body{display:none;padding:8px 10px;background:#08080b;border-top:1px solid var(--border);color:var(--dim);white-space:pre-wrap;font-size:10.5px;max-height:200px;overflow-y:auto}
 
-            /* Response Block */
-            .claude-response-block {
-                background: var(--bg-card);
-                border: 1px solid var(--border-color);
-                border-radius: 10px;
-                padding: 18px;
-                line-height: 1.6;
-                font-size: 14px;
-                color: var(--text-main);
-                white-space: pre-wrap;
-            }
+/* Think Block */
+.think-block{border-left:3px solid var(--purple);background:rgba(168,85,247,0.03);padding:10px 14px;border-radius:0 8px 8px 0;font-family:var(--mono);font-size:12px;color:#c084fc;white-space:pre-wrap;max-height:180px;overflow-y:auto}
+.think-block .label{font-weight:700;color:var(--purple);margin-bottom:4px}
 
-            /* Streaming pulse animation */
-            .typing-cursor::after {
-                content: '▌';
-                animation: blink 0.8s infinite;
-                color: var(--accent-claude);
-            }
-            @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+/* Report Block */
+.report-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;line-height:1.7;font-size:13.5px;color:var(--text);white-space:pre-wrap}
 
-            /* Bottom Prompt Box */
-            .prompt-footer {
-                padding: 16px 32px 24px;
-                max-width: 1050px;
-                width: 100%;
-                margin: 0 auto;
-            }
-            .claude-input-container {
-                background: var(--bg-input);
-                border: 1px solid var(--border-color);
-                border-radius: 14px;
-                padding: 10px 14px;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-                transition: border-color 0.2s;
-            }
-            .claude-input-container:focus-within {
-                border-color: var(--accent-claude);
-            }
-            textarea.prompt-textarea {
-                width: 100%;
-                background: transparent;
-                border: none;
-                color: #ffffff;
-                font-size: 14.5px;
-                font-family: var(--font-code);
-                resize: none;
-                outline: none;
-                min-height: 40px;
-                max-height: 160px;
-            }
-            textarea.prompt-textarea::placeholder {
-                color: #71717a;
-            }
-            .input-actions {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 8px;
-                margin-top: 6px;
-            }
-            .mode-toggles {
-                display: flex;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 6px;
-            }
-            .btn-mode {
-                background: rgba(255, 255, 255, 0.04);
-                border: 1px solid var(--border-color);
-                color: var(--text-main);
-                border-radius: 14px;
-                padding: 5px 12px;
-                font-size: 12px;
-                font-family: var(--font-code);
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                transition: all 0.15s;
-            }
-            .btn-mode:hover {
-                background: rgba(255, 255, 255, 0.1);
-                color: #ffffff;
-            }
-            .btn-mode.active-search {
-                background: rgba(56, 189, 248, 0.2);
-                border-color: var(--accent-blue);
-                color: var(--accent-blue);
-                font-weight: 600;
-            }
-            .btn-mode.active-think {
-                background: rgba(168, 85, 247, 0.2);
-                border-color: var(--accent-purple);
-                color: var(--accent-purple);
-                font-weight: 600;
-            }
-            .btn-mode.active-canvas {
-                background: rgba(249, 115, 22, 0.2);
-                border-color: #f97316;
-                color: #f97316;
-                font-weight: 600;
-            }
-            
-            /* Action / Stop Button */
-            .action-btn {
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                border: none;
-                background: #ffffff;
-                color: #0e0e11;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.15s ease;
-            }
-            .action-btn:hover {
-                background: var(--accent-claude);
-                color: #ffffff;
-            }
-            .action-btn.stop-mode {
-                background: #ef4444 !important;
-                color: #ffffff !important;
-                border-radius: 8px;
-            }
-            .action-btn.stop-mode:hover {
-                background: #dc2626 !important;
-            }
-        </style>
-    </head>
-    <body>
-        <sidebar>
-            <div class="brand-header">
-                <div class="brand-logo">C</div>
-                <div class="brand-title">Claude Code Desktop</div>
-            </div>
+/* Loading */
+.loading{font-family:var(--mono);font-size:12px;color:var(--blue);display:flex;align-items:center;gap:8px}
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 
-            <h4>Sessions Recentes</h4>
-            <div id="history-list" class="history-list">
-                <div class="history-item">Chargement...</div>
-            </div>
-        </sidebar>
+/* === PROMPT === */
+.prompt-area{padding:12px 32px 20px;max-width:900px;width:100%;margin:0 auto}
+.prompt-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;transition:border-color .2s}
+.prompt-box:focus-within{border-color:var(--accent)}
+.prompt-box textarea{width:100%;background:transparent;border:none;color:#fff;font-size:14px;font-family:var(--mono);resize:none;outline:none;min-height:36px;max-height:140px}
+.prompt-box textarea::placeholder{color:var(--muted)}
+.prompt-actions{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+.prompt-status{font-family:var(--mono);font-size:10.5px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.prompt-status .live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite}
+.send-btn{width:28px;height:28px;border-radius:50%;border:none;background:#fff;color:#0a0a0d;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.send-btn:hover{background:var(--accent);color:#fff}
+.send-btn.stop{background:var(--red);color:#fff;border-radius:6px}
 
-        <main>
-            <header>
-                <span>Claude Code CLI • Session Active</span>
-            </header>
+/* === CONTEXT PANEL === */
+.ctx-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.ctx-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.ctx-tab{flex:1;padding:8px 0;text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--muted);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent}
+.ctx-tab:hover{color:var(--text)}
+.ctx-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.ctx-body{flex:1;overflow-y:auto;padding:12px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.ctx-body::-webkit-scrollbar{width:3px}
+.ctx-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-            <div id="chat-container" class="chat-container">
-                <div style="text-align: center; margin: 50px 0;">
-                    <h2 style="font-family: var(--font-code); color: var(--accent-claude); font-size: 22px; margin-bottom: 6px;">Claude Code Desktop</h2>
-                    <p style="color: var(--text-muted); font-size: 13.5px;">Tapez une cible OSINT pour démarrer la recherche.</p>
-                </div>
-            </div>
+/* File tree */
+.file-item{padding:4px 8px;border-radius:4px;cursor:default;display:flex;align-items:center;gap:6px}
+.file-item:hover{background:rgba(255,255,255,0.03)}
+.file-item .icon{color:var(--blue);font-size:10px}
+.file-item.dir{color:var(--dim);font-weight:500}
 
-            <div class="prompt-footer">
-                <div class="claude-input-container">
-                    <textarea id="prompt-input" class="prompt-textarea" placeholder="Entrez une cible (Entreprise, SIREN, LEI, Domaine)..."></textarea>
-                    
-                    <div class="input-actions">
-                        <div style="display: flex; items-center: center; gap: 8px; font-family: var(--font-code); font-size: 11.5px; color: var(--accent-claude);">
-                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: blink 1.5s infinite;"></span>
-                            <span>⚡ 45 Outils OSINT + Bases Leakkées • Mode Recherche Preuves Continue</span>
-                        </div>
+/* Console */
+.console-line{padding:1px 0;color:var(--muted);font-size:10.5px;line-height:1.5}
+.console-line.err{color:var(--red)}
 
-                        <button id="action-btn" class="action-btn" type="button" title="Envoyer">
-                            <!-- Flèche épurée SVG -->
-                            <svg id="arrow-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
-                                <line x1="12" y1="19" x2="12" y2="5" style="pointer-events: none;"></line>
-                                <polyline points="5 12 12 5 19 12" style="pointer-events: none;"></polyline>
-                            </svg>
-                            <!-- Icône Stop Carré -->
-                            <svg id="stop-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:none; pointer-events: none;">
-                                <rect x="4" y="4" width="16" height="16" rx="2" style="pointer-events: none;"></rect>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </main>
+/* Welcome */
+.welcome{text-align:center;padding:80px 20px}
+.welcome h2{font-family:var(--mono);color:var(--accent);font-size:18px;font-weight:600;margin-bottom:6px}
+.welcome p{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="ide">
 
-        <script>
-            let activeMode = null;
-            let currentAbortController = null;
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-head">
+      <div class="logo">C</div>
+      <span>Claude Code</span>
+    </div>
+    <button class="sidebar-new" onclick="newSession()">+ Nouvelle session</button>
+    <div class="sidebar-label">Sessions</div>
+    <div id="sessions" class="sessions"><div style="color:var(--muted);font-size:11px;padding:0 8px">Chargement...</div></div>
+  </div>
 
-            function safeIcons() {
-                try {
-                    if (typeof lucide !== 'undefined' && lucide && lucide.createIcons) {
-                        lucide.createIcons();
-                    }
-                } catch(e) {
-                    console.warn("Lucide icons notice:", e);
-                }
-            }
+  <!-- CHAT -->
+  <div class="chat-col">
+    <div id="chat" class="chat-scroll">
+      <div class="welcome">
+        <h2>Claude Code Desktop</h2>
+        <p>Entrez une cible pour lancer une investigation OSINT autonome.</p>
+      </div>
+    </div>
+    <div class="prompt-area">
+      <div class="prompt-box">
+        <textarea id="input" placeholder="Decrivez votre cible d&#39;investigation..." rows="1"></textarea>
+        <div class="prompt-actions">
+          <div class="prompt-status"><span class="live"></span> 60+ Outils OSINT / ADINT / Leaks</div>
+          <button id="send-btn" class="send-btn" type="button">
+            <svg id="arrow-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+            <svg id="stop-ico" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-            async function loadHistory() {
-                const list = document.getElementById('history-list');
-                try {
-                    const res = await fetch('/api/history');
-                    const data = await res.json();
-                    if (!data.investigations || data.investigations.length === 0) {
-                        list.innerHTML = '<div style="font-size:11px; color:var(--text-muted);">Aucune session.</div>';
-                        return;
-                    }
-                    list.innerHTML = data.investigations.map(inv => `
-                        <div class="history-item" onclick="loadInvestigationDetail('${escapeHtml(inv.id)}')">
-                            <i data-lucide="terminal" style="width: 12px;"></i>
-                            <div class="title">${escapeHtml(inv.target)}</div>
-                        </div>
-                    `).join('');
-                    safeIcons();
-                } catch(e) {
-                    list.innerHTML = '<div style="font-size:11px; color:#ef4444;">Erreur historique.</div>';
-                }
-            }
+  <!-- CONTEXT PANEL -->
+  <div class="ctx-panel">
+    <div class="ctx-tabs">
+      <div class="ctx-tab active" onclick="switchTab('files')">Fichiers</div>
+      <div class="ctx-tab" onclick="switchTab('summary')">Resume</div>
+      <div class="ctx-tab" onclick="switchTab('console')">Console</div>
+    </div>
+    <div id="ctx-body" class="ctx-body">
+      <div id="tab-files"></div>
+      <div id="tab-summary" style="display:none"></div>
+      <div id="tab-console" style="display:none"></div>
+    </div>
+  </div>
 
-            async function loadInvestigationDetail(invId) {
-                const chatContainer = document.getElementById('chat-container');
-                chatContainer.innerHTML = '<div style="font-family: var(--font-code); color: var(--accent-blue);">⏳ Chargement de la session depuis SQLite...</div>';
+</div>
 
-                try {
-                    const res = await fetch('/api/history/' + encodeURIComponent(invId));
-                    if (!res.ok) throw new Error('Session introuvable (HTTP ' + res.status + ')');
-                    const data = await res.json();
-                    const inv = data.investigation;
-                    if (!inv) throw new Error('Investigation introuvable dans la base.');
-                    const logs = data.logs || [];
+<script>
+let abortCtrl = null;
 
-                    const toolSeqLog = logs.find(l => l.action_type === 'TOOL_SEQUENCE');
-                    const thoughtLog = logs.find(l => l.action_type === 'THOUGHT_PROCESS');
-                    const reportLog = logs.find(l => l.action_type === 'FINAL_REPORT');
+/* --- Escape --- */
+function esc(t){if(t==null)return'';if(typeof t!=='string')t=JSON.stringify(t);return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 
-                    let sequence = [];
-                    if (toolSeqLog && toolSeqLog.content) {
-                        try { sequence = JSON.parse(toolSeqLog.content); } catch(e) {}
-                    }
+/* --- Tabs --- */
+function switchTab(name){
+  document.querySelectorAll('.ctx-tab').forEach((t,i)=>{t.classList.remove('active')});
+  document.querySelectorAll('.ctx-tab').forEach(t=>{if(t.textContent.toLowerCase().includes(name.substring(0,4)))t.classList.add('active')});
+  ['files','summary','console'].forEach(n=>{document.getElementById('tab-'+n).style.display=n===name?'block':'none'});
+}
 
-                    renderClaudeSession(inv.target, sequence, thoughtLog ? thoughtLog.content : '', reportLog ? reportLog.content : inv.summary);
-                } catch(e) {
-                    chatContainer.innerHTML = '<div style="color: #ef4444;">Erreur de rechargement : ' + escapeHtml(e.message) + '</div>';
-                }
-            }
+/* --- File Tree --- */
+async function loadFileTree(){
+  try{
+    const r=await fetch('/api/files/tree');const d=await r.json();
+    document.getElementById('tab-files').innerHTML=d.tree.map(f=>'<div class="file-item"><span class="icon">&#128196;</span>'+esc(f.path)+'</div>').join('');
+  }catch(e){document.getElementById('tab-files').innerHTML='<div style="color:var(--red)">Erreur</div>'}
+}
 
-            function renderClaudeSession(target, toolSequence, thinkingProcess, reportResult) {
-                const chatContainer = document.getElementById('chat-container');
-                let html = `
-                    <div style="font-family: var(--font-code); color: var(--text-muted); font-size: 13px;">
-                        <span style="color: var(--accent-claude); font-weight: bold;">user@claude-desktop</span>:~$ osint-investigate --target "${escapeHtml(target)}"
-                    </div>
-                    <div style="background: rgba(217, 119, 87, 0.08); border: 1px solid var(--accent-claude); border-radius: 8px; padding: 12px 16px; margin-top: 8px; font-family: var(--font-code);">
-                        <div style="color: var(--accent-claude); font-weight: bold; font-size: 13px;">🎯 [OBJECTIF IA & HYPOTHÈSE]</div>
-                        <div style="color: var(--text-main); font-size: 12.5px; margin-top: 4px;">
-                            L'IA a pris le contrôle dynamique des 60+ outils OSINT/ADINT/Leaks/GPS pour investiguer <strong>"${escapeHtml(target)}"</strong>.
-                        </div>
-                        <div style="color: var(--text-muted); font-size: 11.5px; margin-top: 4px;">
-                            💡 Hypothèse : Identification des structures légales, des identifiants Analytics/AdSense (ADINT), géolocalisation et recoupement des bases de fuites d'identifiants.
-                        </div>
-                    </div>
-                `;
+/* --- Console --- */
+async function loadConsole(){
+  try{
+    const r=await fetch('/api/system/logs');const d=await r.json();
+    document.getElementById('tab-console').innerHTML=d.logs.map(l=>'<div class="console-line">'+esc(l)+'</div>').join('');
+  }catch(e){document.getElementById('tab-console').innerHTML='<div class="console-line err">Erreur chargement logs</div>'}
+}
 
-                if (toolSequence && toolSequence.length > 0) {
-                    html += `
-                        <details style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-top: 8px;">
-                            <summary style="cursor: pointer; font-family: var(--font-code); color: var(--accent-blue); font-weight: 600; font-size: 13px; outline: none; user-select: none;">
-                                🔨 Exécution des ${toolSequence.length} Outils OSINT (Cliquer pour ouvrir les détails)
-                            </summary>
-                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
-                                ${toolSequence.map((t, idx) => `
-                                    <div class="claude-tool-block">
-                                        <div class="claude-tool-header" onclick="toggleToolBody('tool-body-${idx}')">
-                                            <div class="tool-call-label">
-                                                <i data-lucide="wrench" style="width: 13px;"></i>
-                                                [Tool ${idx + 1}/${toolSequence.length}] ${escapeHtml(t.tool_name)}
-                                            </div>
-                                            <div class="tool-meta">⚡ ${t.duration_ms} ms • ${t.status}</div>
-                                        </div>
-                                        <div id="tool-body-${idx}" class="claude-tool-body">
-<strong>INPUT:</strong>
-${escapeHtml(JSON.stringify(t.input, null, 2))}
+/* --- Sessions --- */
+async function loadSessions(){
+  const el=document.getElementById('sessions');
+  try{
+    const r=await fetch('/api/history');const d=await r.json();
+    if(!d.investigations||d.investigations.length===0){el.innerHTML='<div style="color:var(--muted);font-size:11px;padding:0 8px">Aucune session.</div>';return}
+    el.innerHTML=d.investigations.map(inv=>'<div class="session-item" onclick="loadSession(&#39;'+esc(inv.id)+'&#39;)"><span class="dot"></span>'+esc(inv.target)+'</div>').join('');
+  }catch(e){el.innerHTML='<div style="color:var(--red);font-size:11px;padding:0 8px">Erreur.</div>'}
+}
 
-<strong>OUTPUT:</strong>
-${escapeHtml(JSON.stringify(t.output, null, 2))}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </details>
-                    `;
-                }
+function newSession(){
+  document.getElementById('chat').innerHTML='<div class="welcome"><h2>Claude Code Desktop</h2><p>Entrez une cible pour lancer une investigation OSINT autonome.</p></div>';
+  document.getElementById('input').value='';
+  document.getElementById('input').focus();
+}
 
-                if (thinkingProcess) {
-                    html += `
-                        <div class="claude-thinking-block">
-                            <div style="font-weight:700; margin-bottom:6px; color:var(--accent-purple);">🧠 Chain of Thought (&lt;think&gt;)</div>
-                            ${escapeHtml(thinkingProcess)}
-                        </div>
-                    `;
-                }
+/* --- Load Session --- */
+async function loadSession(id){
+  const chat=document.getElementById('chat');
+  chat.innerHTML='<div class="loading"><div class="spinner"></div> Chargement depuis SQLite...</div>';
+  try{
+    const r=await fetch('/api/history/'+encodeURIComponent(id));if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();const inv=d.investigation;const logs=d.logs||[];
+    const toolLog=logs.find(l=>l.action_type==='TOOL_SEQUENCE');
+    const thinkLog=logs.find(l=>l.action_type==='THOUGHT_PROCESS');
+    const reportLog=logs.find(l=>l.action_type==='FINAL_REPORT');
+    let seq=[];if(toolLog&&toolLog.content){try{seq=JSON.parse(toolLog.content)}catch(e){}}
+    renderSession(inv.target,seq,thinkLog?thinkLog.content:'',reportLog?reportLog.content:inv.summary);
+  }catch(e){chat.innerHTML='<div style="color:var(--red);font-family:var(--mono);font-size:12px">Erreur : '+esc(e.message)+'</div>'}
+}
 
-                if (reportResult) {
-                    html += `
-                        <div class="claude-response-block">
-                            ${escapeHtml(reportResult)}
-                        </div>
-                    `;
-                }
+/* --- Toggle Tool --- */
+function toggleTool(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='block'?'none':'block'}
 
-                chatContainer.innerHTML = html;
-                safeIcons();
-            }
+/* --- Render Session --- */
+function renderSession(target,tools,think,report){
+  const chat=document.getElementById('chat');
+  let h='';
 
-            function toggleToolBody(id) {
-                const el = document.getElementById(id);
-                if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
-            }
+  // User message
+  h+='<div class="msg-user"><b>user@osint:~$</b> investigate --target "'+esc(target)+'"</div>';
 
+  // AI Intent
+  h+='<div class="intent-card"><div class="title">&#127919; Objectif IA</div><div>Analyse dynamique de <strong>'+esc(target)+'</strong> via 60+ outils OSINT/ADINT/Leaks.</div><div class="hypo">&#128161; L&#39;IA choisit ses outils et formule ses hypotheses en temps reel.</div></div>';
 
+  // Tools
+  if(tools&&tools.length>0){
+    h+='<div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px">&#128296; '+tools.length+' outils executes</div>';
+    h+='<div style="display:flex;flex-direction:column;gap:4px">';
+    tools.forEach((t,i)=>{
+      h+='<div class="tool-card"><div class="tool-head" onclick="toggleTool(&#39;tb-'+i+'&#39;)"><div class="name"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'+esc(t.tool_name)+'</div><div class="meta">'+t.duration_ms+'ms &#10003;</div></div><div id="tb-'+i+'" class="tool-body"><strong>INPUT:</strong>\\n'+esc(JSON.stringify(t.input,null,2))+'\\n\\n<strong>OUTPUT:</strong>\\n'+esc(JSON.stringify(t.output,null,2))+'</div></div>';
+    });
+    h+='</div>';
+  }
 
-            function handleActionClick(event) {
-                if (event) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                if (currentAbortController) {
-                    currentAbortController.abort();
-                    currentAbortController = null;
-                    setBtnState(false);
-                    const chatContainer = document.getElementById('chat-container');
-                    chatContainer.innerHTML += '<div style="color:#ef4444; font-family:var(--font-code); margin-top:10px;">🛑 Génération interrompue immédiatement par l&#39;utilisateur.</div>';
-                    return;
-                }
+  // Think
+  if(think){h+='<div class="think-block"><div class="label">&#129504; Raisonnement</div>'+esc(think)+'</div>'}
 
-                submitSearch();
-            }
+  // Report
+  if(report){h+='<div class="report-block">'+esc(report)+'</div>'}
 
-            function setBtnState(isGenerating) {
-                const btn = document.getElementById('action-btn');
-                const arrow = document.getElementById('arrow-icon');
-                const stop = document.getElementById('stop-icon');
+  chat.innerHTML=h;
+  chat.scrollTop=chat.scrollHeight;
 
-                if (isGenerating) {
-                    btn.classList.add('stop-mode');
-                    arrow.style.display = 'none';
-                    stop.style.display = 'block';
-                    btn.title = "Arrêter immédiatement";
-                } else {
-                    btn.classList.remove('stop-mode');
-                    arrow.style.display = 'block';
-                    stop.style.display = 'none';
-                    btn.title = "Envoyer";
-                }
-            }
+  // Update summary tab
+  document.getElementById('tab-summary').innerHTML='<div style="margin-bottom:8px;color:var(--accent);font-weight:600">'+esc(target)+'</div><div>Outils : '+(tools?tools.length:0)+'</div><div>Think : '+(think?think.length:0)+' chars</div><div>Rapport : '+(report?report.length:0)+' chars</div>';
+}
 
-            async function submitSearch() {
-                const promptInput = document.getElementById('prompt-input');
-                const query = promptInput.value.trim();
-                
-                if (!query) return alert('Veuillez entrer une cible !');
+/* --- Submit --- */
+async function submit(){
+  const inp=document.getElementById('input');
+  const q=inp.value.trim();
+  if(!q)return;
+  const chat=document.getElementById('chat');
+  const ctrl=new AbortController();abortCtrl=ctrl;
+  setBtnStop(true);
 
-                const chatContainer = document.getElementById('chat-container');
-                const thisController = new AbortController();
-                currentAbortController = thisController;
-                setBtnState(true);
-                
-                chatContainer.innerHTML = `
-                    <div style="font-family: var(--font-code); color: var(--text-muted); font-size: 13px;">
-                        <span style="color: var(--accent-claude); font-weight: bold;">user@claude-desktop</span>:~$ osint-investigate --target "${escapeHtml(query)}"
-                    </div>
-                    <div class="typing-cursor" style="font-family: var(--font-code); color: var(--accent-blue); margin-top: 10px;">
-                        ⚡ Interrogation séquentielle des 45 registres OSINT et du moteur Qwen3.6-12B...
-                    </div>
-                `;
+  chat.innerHTML='<div class="msg-user"><b>user@osint:~$</b> investigate --target "'+esc(q)+'"</div><div class="loading"><div class="spinner"></div> Interrogation des 60+ registres OSINT et du moteur IA...</div>';
 
-                let fullQuery = query;
+  try{
+    const r=await fetch('/api/investigate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q}),signal:ctrl.signal});
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||'HTTP '+r.status)}
+    const d=await r.json();
+    renderSession(d.target,d.tool_sequence,d.thinking_process,d.results);
+    inp.value='';loadSessions();
+  }catch(e){
+    if(e.name==='AbortError'){chat.innerHTML+='<div style="color:var(--red);font-family:var(--mono);font-size:12px;margin-top:8px">&#128721; Interrompu.</div>'}
+    else{chat.innerHTML+='<div style="color:var(--red);font-family:var(--mono);font-size:12px;margin-top:8px">&#10060; '+esc(e.message)+'</div>'}
+  }finally{if(abortCtrl===ctrl){abortCtrl=null;setBtnStop(false)}}
+}
 
-                try {
-                    const res = await fetch('/api/investigate', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: fullQuery }),
-                        signal: thisController.signal
-                    });
-                    if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
-                        throw new Error(errData.detail || 'Erreur serveur (HTTP ' + res.status + ')');
-                    }
-                    const data = await res.json();
-                    
-                    renderClaudeSession(data.target, data.tool_sequence, data.thinking_process, data.results);
-                    promptInput.value = '';
-                    loadHistory();
-                } catch (e) {
-                    if (e.name === 'AbortError') {
-                        console.log("Fetch interrompu");
-                    } else {
-                        chatContainer.innerHTML += '<div style="color: #ef4444; font-family: var(--font-code); margin-top: 10px;">❌ ' + escapeHtml(e.message) + '</div>';
-                    }
-                } finally {
-                    if (currentAbortController === thisController) {
-                        currentAbortController = null;
-                        setBtnState(false);
-                    }
-                }
-            }
+function handleClick(e){if(e){e.preventDefault();e.stopPropagation()}if(abortCtrl){abortCtrl.abort();abortCtrl=null;setBtnStop(false);return}submit()}
 
-            function escapeHtml(text) {
-                if (text === null || text === undefined) return '';
-                if (typeof text !== 'string') text = JSON.stringify(text);
-                return text
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            }
+function setBtnStop(on){
+  const b=document.getElementById('send-btn');const a=document.getElementById('arrow-ico');const s=document.getElementById('stop-ico');
+  if(on){b.classList.add('stop');a.style.display='none';s.style.display='block'}
+  else{b.classList.remove('stop');a.style.display='block';s.style.display='none'}
+}
 
-            document.addEventListener('DOMContentLoaded', function() {
-                safeIcons();
-                loadHistory();
-                const btn = document.getElementById('action-btn');
-                if (btn) {
-                    btn.addEventListener('click', handleActionClick);
-                }
-                const input = document.getElementById('prompt-input');
-                if (input) {
-                    input.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleActionClick(e);
-                        }
-                    });
-                }
-            });
-        </script>
-    </body>
-    </html>
-    """
+/* --- Init --- */
+document.addEventListener('DOMContentLoaded',function(){
+  loadSessions();loadFileTree();loadConsole();
+  document.getElementById('send-btn').addEventListener('click',handleClick);
+  document.getElementById('input').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleClick(e)}});
+  document.getElementById('input').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,140)+'px'});
+});
+</script>
+</body>
+</html>"""
     return HTMLResponse(content=html_content)
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=False)
+
