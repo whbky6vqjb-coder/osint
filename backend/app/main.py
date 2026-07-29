@@ -255,7 +255,7 @@ def serve_dashboard():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Claude Code Desktop • OSINT Deep Research</title>
+        <title>Claude Code Desktop</title>
         <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <script src="https://unpkg.com/lucide@latest"></script>
         <style>
@@ -287,7 +287,7 @@ def serve_dashboard():
 
             /* Claude Code Left Sidebar */
             sidebar {
-                width: 260px;
+                width: 250px;
                 background: var(--bg-sidebar);
                 border-right: 1px solid var(--border-color);
                 display: flex;
@@ -304,8 +304,8 @@ def serve_dashboard():
                 margin-bottom: 14px;
             }
             .brand-logo {
-                width: 26px;
-                height: 26px;
+                width: 24px;
+                height: 24px;
                 background: var(--accent-claude);
                 border-radius: 6px;
                 display: flex;
@@ -313,14 +313,13 @@ def serve_dashboard():
                 justify-content: center;
                 color: #000;
                 font-weight: 800;
-                font-size: 14px;
+                font-size: 13px;
                 font-family: var(--font-code);
             }
             .brand-title {
-                font-size: 14px;
+                font-size: 13.5px;
                 font-weight: 700;
                 color: #ffffff;
-                letter-spacing: -0.2px;
             }
             sidebar h4 {
                 font-size: 11px;
@@ -329,25 +328,21 @@ def serve_dashboard():
                 color: var(--text-muted);
                 margin-top: 8px;
                 margin-bottom: 12px;
-                display: flex;
-                align-items: center;
-                gap: 6px;
             }
             .history-list {
                 flex: 1;
                 overflow-y: auto;
                 display: flex;
                 flex-direction: column;
-                gap: 6px;
+                gap: 4px;
             }
             .history-item {
                 background: transparent;
-                border: 1px solid transparent;
-                border-radius: 8px;
-                padding: 8px 10px;
+                border-radius: 6px;
+                padding: 7px 10px;
                 cursor: pointer;
                 transition: all 0.15s;
-                font-size: 12.5px;
+                font-size: 12px;
                 color: var(--text-muted);
                 display: flex;
                 align-items: center;
@@ -356,7 +351,6 @@ def serve_dashboard():
             .history-item:hover {
                 background: rgba(255, 255, 255, 0.05);
                 color: #ffffff;
-                border-color: var(--border-color);
             }
             .history-item .title {
                 white-space: nowrap;
@@ -365,7 +359,7 @@ def serve_dashboard():
                 font-family: var(--font-code);
             }
 
-            /* Main Claude Code Workspace */
+            /* Main Workspace */
             main {
                 flex: 1;
                 display: flex;
@@ -374,81 +368,51 @@ def serve_dashboard():
                 overflow: hidden;
             }
 
-            /* Claude Top Navigation / Status Header */
+            /* Clean Header */
             header {
-                height: 48px;
+                height: 42px;
                 background: var(--bg-sidebar);
                 border-bottom: 1px solid var(--border-color);
                 display: flex;
-                justify-content: space-between;
                 align-items: center;
                 padding: 0 20px;
                 font-size: 12px;
                 font-family: var(--font-code);
-            }
-            .header-left {
-                display: flex;
-                align-items: center;
-                gap: 12px;
                 color: var(--text-muted);
             }
-            .model-badge {
-                background: rgba(217, 119, 87, 0.15);
-                color: var(--accent-claude);
-                border: 1px solid rgba(217, 119, 87, 0.3);
-                padding: 2px 8px;
-                border-radius: 12px;
-                font-weight: 600;
-            }
-            .status-indicator {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                color: var(--accent-green);
-                font-weight: 600;
-            }
-            .status-dot {
-                width: 8px;
-                height: 8px;
-                background: var(--accent-green);
-                border-radius: 50%;
-                box-shadow: 0 0 8px var(--accent-green);
-            }
 
-            /* Chat Stream Area */
+            /* Chat Area */
             .chat-container {
                 flex: 1;
                 overflow-y: auto;
                 padding: 24px 32px;
                 display: flex;
                 flex-direction: column;
-                gap: 20px;
+                gap: 18px;
                 max-width: 1050px;
                 width: 100%;
                 margin: 0 auto;
             }
 
-            /* Claude Code Tool Card Block */
+            /* Claude Code Tool Block */
             .claude-tool-block {
                 background: var(--bg-card);
                 border: 1px solid var(--border-color);
-                border-radius: 10px;
+                border-radius: 8px;
                 overflow: hidden;
                 font-family: var(--font-code);
                 font-size: 12px;
             }
             .claude-tool-header {
-                padding: 10px 14px;
-                background: rgba(255, 255, 255, 0.02);
+                padding: 8px 12px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 cursor: pointer;
                 user-select: none;
-                border-bottom: 1px solid transparent;
             }
             .claude-tool-header:hover {
-                background: rgba(255, 255, 255, 0.04);
+                background: rgba(255, 255, 255, 0.03);
             }
             .tool-call-label {
                 display: flex;
@@ -462,7 +426,7 @@ def serve_dashboard():
                 font-size: 11px;
             }
             .claude-tool-body {
-                padding: 12px 14px;
+                padding: 12px;
                 background: #0a0a0d;
                 border-top: 1px solid var(--border-color);
                 color: #a1a1aa;
@@ -470,41 +434,41 @@ def serve_dashboard():
                 display: none;
             }
 
-            /* Claude Code Thinking Block (<think>) */
+            /* Thinking Block */
             .claude-thinking-block {
-                background: rgba(168, 85, 247, 0.05);
-                border: 1px dashed rgba(168, 85, 247, 0.3);
-                border-radius: 10px;
-                padding: 14px;
+                background: rgba(168, 85, 247, 0.04);
+                border: 1px dashed rgba(168, 85, 247, 0.25);
+                border-radius: 8px;
+                padding: 12px 14px;
                 font-family: var(--font-code);
                 font-size: 12px;
                 color: #c084fc;
                 white-space: pre-wrap;
-                max-height: 220px;
+                max-height: 200px;
                 overflow-y: auto;
             }
-            .claude-thinking-header {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-weight: 700;
-                margin-bottom: 8px;
-                color: var(--accent-purple);
-            }
 
-            /* Claude Response Box */
+            /* Response Block */
             .claude-response-block {
                 background: var(--bg-card);
                 border: 1px solid var(--border-color);
-                border-radius: 12px;
-                padding: 20px;
+                border-radius: 10px;
+                padding: 18px;
                 line-height: 1.6;
                 font-size: 14px;
                 color: var(--text-main);
                 white-space: pre-wrap;
             }
 
-            /* Bottom Prompt Box (Claude Code Terminal Style) */
+            /* Streaming pulse animation */
+            .typing-cursor::after {
+                content: '▌';
+                animation: blink 0.8s infinite;
+                color: var(--accent-claude);
+            }
+            @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+            /* Bottom Prompt Box */
             .prompt-footer {
                 padding: 16px 32px 24px;
                 max-width: 1050px;
@@ -514,9 +478,9 @@ def serve_dashboard():
             .claude-input-container {
                 background: var(--bg-input);
                 border: 1px solid var(--border-color);
-                border-radius: 16px;
-                padding: 12px 16px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                border-radius: 14px;
+                padding: 10px 14px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
                 transition: border-color 0.2s;
             }
             .claude-input-container:focus-within {
@@ -527,12 +491,12 @@ def serve_dashboard():
                 background: transparent;
                 border: none;
                 color: #ffffff;
-                font-size: 15px;
+                font-size: 14.5px;
                 font-family: var(--font-code);
                 resize: none;
                 outline: none;
-                min-height: 44px;
-                max-height: 180px;
+                min-height: 40px;
+                max-height: 160px;
             }
             textarea.prompt-textarea::placeholder {
                 color: #71717a;
@@ -541,29 +505,29 @@ def serve_dashboard():
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                margin-top: 8px;
+                margin-top: 6px;
             }
             .mode-toggles {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 6px;
             }
             .btn-mode {
                 background: transparent;
                 border: 1px solid transparent;
                 color: var(--text-muted);
-                border-radius: 16px;
-                padding: 5px 12px;
-                font-size: 12px;
+                border-radius: 14px;
+                padding: 4px 10px;
+                font-size: 11.5px;
                 font-family: var(--font-code);
                 cursor: pointer;
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 5px;
                 transition: all 0.15s;
             }
             .btn-mode:hover {
-                background: rgba(255, 255, 255, 0.06);
+                background: rgba(255, 255, 255, 0.05);
                 color: #ffffff;
             }
             .btn-mode.active-search {
@@ -582,10 +546,10 @@ def serve_dashboard():
                 color: #f97316;
             }
             
-            /* Fleche d'envoi épurée */
-            .send-btn-claude {
-                width: 34px;
-                height: 34px;
+            /* Action / Stop Button */
+            .action-btn {
+                width: 32px;
+                height: 32px;
                 border-radius: 50%;
                 border: none;
                 background: #ffffff;
@@ -594,19 +558,20 @@ def serve_dashboard():
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s ease;
+                transition: all 0.15s ease;
             }
-            .send-btn-claude:hover {
+            .action-btn:hover {
                 background: var(--accent-claude);
                 color: #ffffff;
-                transform: translateY(-1px);
             }
-            .send-btn-claude.loading {
-                animation: spin 1s linear infinite;
-                background: var(--accent-blue);
-                color: #ffffff;
+            .action-btn.stop-mode {
+                background: #ef4444 !important;
+                color: #ffffff !important;
+                border-radius: 8px;
             }
-            @keyframes spin { 100% { transform: rotate(360deg); } }
+            .action-btn.stop-mode:hover {
+                background: #dc2626 !important;
+            }
         </style>
     </head>
     <body>
@@ -616,7 +581,7 @@ def serve_dashboard():
                 <div class="brand-title">Claude Code Desktop</div>
             </div>
 
-            <h4><i data-lucide="history" style="width: 14px;"></i> Sessions Recentes</h4>
+            <h4>Sessions Recentes</h4>
             <div id="history-list" class="history-list">
                 <div class="history-item">Chargement...</div>
             </div>
@@ -624,49 +589,45 @@ def serve_dashboard():
 
         <main>
             <header>
-                <div class="header-left">
-                    <span>Claude Code v2.0 • OSINT Agent</span>
-                    <span class="model-badge">Qwen3.6-12B (CPU)</span>
-                </div>
-                <div class="status-indicator">
-                    <div class="status-dot"></div>
-                    <span>45 OUTILS CONNECTES</span>
-                </div>
+                <span>Claude Code CLI • Session Active</span>
             </header>
 
             <div id="chat-container" class="chat-container">
-                <!-- Welcome Banner -->
-                <div style="text-align: center; margin: 40px 0;">
-                    <h2 style="font-family: var(--font-code); color: var(--accent-claude); font-size: 24px; margin-bottom: 8px;">Claude Code Desktop Engine</h2>
-                    <p style="color: var(--text-muted); font-size: 14px;">Moteur d'investigation OSINT autonome avec traçabilité intégrale des 45 registres et CoT.</p>
+                <div style="text-align: center; margin: 50px 0;">
+                    <h2 style="font-family: var(--font-code); color: var(--accent-claude); font-size: 22px; margin-bottom: 6px;">Claude Code Desktop</h2>
+                    <p style="color: var(--text-muted); font-size: 13.5px;">Tapez une cible OSINT pour démarrer la recherche.</p>
                 </div>
             </div>
 
             <div class="prompt-footer">
                 <div class="claude-input-container">
-                    <textarea id="prompt-input" class="prompt-textarea" placeholder="Entrez une cible d'investigation (Entreprise, SIREN, LEI, Domaine, Individu)..."></textarea>
+                    <textarea id="prompt-input" class="prompt-textarea" placeholder="Entrez une cible (Entreprise, SIREN, LEI, Domaine)..."></textarea>
                     
                     <div class="input-actions">
                         <div class="mode-toggles">
                             <button id="toggle-search" class="btn-mode" onclick="toggleMode('search')">
-                                <i data-lucide="globe" style="width: 14px;"></i>
+                                <i data-lucide="globe" style="width: 13px;"></i>
                                 <span>Search</span>
                             </button>
                             <button id="toggle-think" class="btn-mode" onclick="toggleMode('think')">
-                                <i data-lucide="brain" style="width: 14px;"></i>
+                                <i data-lucide="brain" style="width: 13px;"></i>
                                 <span>Think</span>
                             </button>
                             <button id="toggle-canvas" class="btn-mode" onclick="toggleMode('canvas')">
-                                <i data-lucide="code" style="width: 14px;"></i>
+                                <i data-lucide="code" style="width: 13px;"></i>
                                 <span>Canvas</span>
                             </button>
                         </div>
 
-                        <button id="send-btn" class="send-btn-claude" onclick="submitSearch()" title="Envoyer la requête">
+                        <button id="action-btn" class="action-btn" onclick="handleActionClick()" title="Envoyer">
                             <!-- Flèche épurée SVG -->
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <svg id="arrow-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="19" x2="12" y2="5"></line>
                                 <polyline points="5 12 12 5 19 12"></polyline>
+                            </svg>
+                            <!-- Icône Stop Carré -->
+                            <svg id="stop-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
+                                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
                             </svg>
                         </button>
                     </div>
@@ -677,6 +638,7 @@ def serve_dashboard():
         <script>
             lucide.createIcons();
             let activeMode = null;
+            let currentAbortController = null;
 
             loadHistory();
 
@@ -734,14 +696,13 @@ def serve_dashboard():
                     </div>
                 `;
 
-                // 1. Tracé des 45 Outils
                 if (toolSequence && toolSequence.length > 0) {
-                    html += `<div style="font-family: var(--font-code); color: var(--accent-blue); font-weight: 600; margin-top: 10px;">🔨 Exécution des ${toolSequence.length} Outils OSINT :</div>`;
+                    html += `<div style="font-family: var(--font-code); color: var(--accent-blue); font-weight: 600; margin-top: 6px;">🔨 Exécution des ${toolSequence.length} Outils OSINT :</div>`;
                     html += toolSequence.map((t, idx) => `
                         <div class="claude-tool-block">
                             <div class="claude-tool-header" onclick="toggleToolBody('tool-body-${idx}')">
                                 <div class="tool-call-label">
-                                    <i data-lucide="wrench" style="width: 14px;"></i>
+                                    <i data-lucide="wrench" style="width: 13px;"></i>
                                     [Tool ${idx + 1}/${toolSequence.length}] ${escapeHtml(t.tool_name)}
                                 </div>
                                 <div class="tool-meta">⚡ ${t.duration_ms} ms • ${t.status}</div>
@@ -757,20 +718,15 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                     `).join('');
                 }
 
-                // 2. Pensée IA <think>
                 if (thinkingProcess) {
                     html += `
                         <div class="claude-thinking-block">
-                            <div class="claude-thinking-header">
-                                <i data-lucide="brain" style="width: 14px;"></i>
-                                <span>Chain of Thought (&lt;think&gt;)</span>
-                            </div>
+                            <div style="font-weight:700; margin-bottom:6px; color:var(--accent-purple);">🧠 Chain of Thought (&lt;think&gt;)</div>
                             ${escapeHtml(thinkingProcess)}
                         </div>
                     `;
                 }
 
-                // 3. Rapport Final
                 if (reportResult) {
                     html += `
                         <div class="claude-response-block">
@@ -806,29 +762,61 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                 }
             }
 
+            function handleActionClick() {
+                if (currentAbortController) {
+                    // STOP DIRECT SI EN COURS !
+                    currentAbortController.abort();
+                    currentAbortController = null;
+                    setBtnState(false);
+                    const chatContainer = document.getElementById('chat-container');
+                    chatContainer.innerHTML += '<div style="color:#ef4444; font-family:var(--font-code); margin-top:10px;">🛑 Génération interrompue immédiatement par l\'utilisateur.</div>';
+                    return;
+                }
+
+                submitSearch();
+            }
+
+            function setBtnState(isGenerating) {
+                const btn = document.getElementById('action-btn');
+                const arrow = document.getElementById('arrow-icon');
+                const stop = document.getElementById('stop-icon');
+
+                if (isGenerating) {
+                    btn.classList.add('stop-mode');
+                    arrow.style.display = 'none';
+                    stop.style.display = 'block';
+                    btn.title = "Arrêter immédiatement";
+                } else {
+                    btn.classList.remove('stop-mode');
+                    arrow.style.display = 'block';
+                    stop.style.display = 'none';
+                    btn.title = "Envoyer";
+                }
+            }
+
             document.getElementById('prompt-input').addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    submitSearch();
+                    if (!currentAbortController) submitSearch();
                 }
             });
 
             async function submitSearch() {
                 const promptInput = document.getElementById('prompt-input');
-                const sendBtn = document.getElementById('send-btn');
                 const query = promptInput.value.trim();
                 
                 if (!query) return alert('Veuillez entrer une cible !');
 
                 const chatContainer = document.getElementById('chat-container');
-                sendBtn.classList.add('loading');
+                currentAbortController = new AbortController();
+                setBtnState(true);
                 
                 chatContainer.innerHTML = `
                     <div style="font-family: var(--font-code); color: var(--text-muted); font-size: 13px;">
                         <span style="color: var(--accent-claude); font-weight: bold;">user@claude-desktop</span>:~$ osint-investigate --target "${escapeHtml(query)}"
                     </div>
-                    <div style="font-family: var(--font-code); color: var(--accent-blue); margin-top: 10px;">
-                        ⚡ Lancement séquentiel des 45 outils OSINT et du moteur Qwen3.6-12B...
+                    <div class="typing-cursor" style="font-family: var(--font-code); color: var(--accent-blue); margin-top: 10px;">
+                        ⚡ Interrogation séquentielle des 45 registres OSINT et du moteur Qwen3.6-12B...
                     </div>
                 `;
 
@@ -839,7 +827,8 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                     const res = await fetch('/api/investigate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: fullQuery })
+                        body: JSON.stringify({ query: fullQuery }),
+                        signal: currentAbortController.signal
                     });
                     const data = await res.json();
                     
@@ -847,9 +836,14 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                     promptInput.value = '';
                     loadHistory();
                 } catch (e) {
-                    chatContainer.innerHTML += '<div style="color: #ef4444; margin-top: 10px;">Erreur d\'investigation : ' + escapeHtml(e.message) + '</div>';
+                    if (e.name === 'AbortError') {
+                        console.log("Fetch interrompu");
+                    } else {
+                        chatContainer.innerHTML += '<div style="color: #ef4444; margin-top: 10px;">Erreur d\'investigation : ' + escapeHtml(e.message) + '</div>';
+                    }
                 } finally {
-                    sendBtn.classList.remove('loading');
+                    currentAbortController = null;
+                    setBtnState(false);
                 }
             }
 
