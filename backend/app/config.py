@@ -17,17 +17,15 @@ class Settings(BaseModel):
     SQLITE_CACHE_SIZE_MB: int = 16  # 16MB max RAM cache
     SQLITE_MMAP_SIZE_MB: int = 256  # 256MB zero-copy mmap
     
-    # LLM & Inference Engine (Nemotron-3-Nano Mamba+MoE config)
-    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "nemotron_local")  # nemotron_local, openai, mock
-    LLM_API_BASE: str = os.getenv("LLM_API_BASE", "http://localhost:8080/v1")  # llama-server / KTransformers endpoint
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "nvidia/nemotron-3-nano-30b-gguf")
+    # Self-Hosted LLM Engine (Qwen3.6-12B IQ-Ultra-Heretic GGUF)
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "qwen_local")
+    LLM_API_BASE: str = os.getenv("LLM_API_BASE", "http://localhost:8080/v1")  # Self-hosted llama-server
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "KevinJK51/Qwen3.6-12B-IQ-Ultra-Heretic-Uncensored-Thinking-V2-Hightop-GGUF")
     LLM_API_KEY: str = os.getenv("LLM_API_KEY", "sk-no-key-required")
     MAX_CONTEXT_TOKENS: int = 1000000  # 1M Context Window
     
-    # KV Cache Compression Params
-    TURBOQUANT_ENABLED: bool = True
-    KV_CACHE_BITS_K: int = 8  # q8_0
-    KV_CACHE_BITS_V: int = 4  # q4_0
+    # llama-server Hardware & KV Cache Optimizations
+    LLAMA_SERVER_FLAGS: str = "--mmap --mlock --cache-type-k q4_0 --cache-type-v q4_0 --flash-attn -b 512 -ub 256 -t 2"
     
     # 24/7 Cloud Sync
     KAGGLE_DATASET_NAME: str = os.getenv("KAGGLE_DATASET_NAME", "osint-agent-state")
