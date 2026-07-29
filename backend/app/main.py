@@ -782,7 +782,7 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                     currentAbortController = null;
                     setBtnState(false);
                     const chatContainer = document.getElementById('chat-container');
-                    chatContainer.innerHTML += '<div style="color:#ef4444; font-family:var(--font-code); margin-top:10px;">🛑 Génération interrompue immédiatement par l\'utilisateur.</div>';
+                    chatContainer.innerHTML += '<div style="color:#ef4444; font-family:var(--font-code); margin-top:10px;">🛑 Génération interrompue immédiatement par l&#39;utilisateur.</div>';
                     return;
                 }
 
