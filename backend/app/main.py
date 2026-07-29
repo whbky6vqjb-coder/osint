@@ -506,45 +506,51 @@ def serve_dashboard():
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
                 margin-top: 6px;
             }
             .mode-toggles {
                 display: flex;
                 align-items: center;
+                flex-wrap: wrap;
                 gap: 6px;
             }
             .btn-mode {
-                background: transparent;
-                border: 1px solid transparent;
-                color: var(--text-muted);
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--border-color);
+                color: var(--text-main);
                 border-radius: 14px;
-                padding: 4px 10px;
-                font-size: 11.5px;
+                padding: 5px 12px;
+                font-size: 12px;
                 font-family: var(--font-code);
                 cursor: pointer;
                 display: flex;
                 align-items: center;
-                gap: 5px;
+                gap: 6px;
                 transition: all 0.15s;
             }
             .btn-mode:hover {
-                background: rgba(255, 255, 255, 0.05);
+                background: rgba(255, 255, 255, 0.1);
                 color: #ffffff;
             }
             .btn-mode.active-search {
-                background: rgba(56, 189, 248, 0.15);
+                background: rgba(56, 189, 248, 0.2);
                 border-color: var(--accent-blue);
                 color: var(--accent-blue);
+                font-weight: 600;
             }
             .btn-mode.active-think {
-                background: rgba(168, 85, 247, 0.15);
+                background: rgba(168, 85, 247, 0.2);
                 border-color: var(--accent-purple);
                 color: var(--accent-purple);
+                font-weight: 600;
             }
             .btn-mode.active-canvas {
-                background: rgba(249, 115, 22, 0.15);
+                background: rgba(249, 115, 22, 0.2);
                 border-color: #f97316;
                 color: #f97316;
+                font-weight: 600;
             }
             
             /* Action / Stop Button */
@@ -707,25 +713,33 @@ def serve_dashboard():
                 `;
 
                 if (toolSequence && toolSequence.length > 0) {
-                    html += `<div style="font-family: var(--font-code); color: var(--accent-blue); font-weight: 600; margin-top: 6px;">🔨 Exécution des ${toolSequence.length} Outils OSINT :</div>`;
-                    html += toolSequence.map((t, idx) => `
-                        <div class="claude-tool-block">
-                            <div class="claude-tool-header" onclick="toggleToolBody('tool-body-${idx}')">
-                                <div class="tool-call-label">
-                                    <i data-lucide="wrench" style="width: 13px;"></i>
-                                    [Tool ${idx + 1}/${toolSequence.length}] ${escapeHtml(t.tool_name)}
-                                </div>
-                                <div class="tool-meta">⚡ ${t.duration_ms} ms • ${t.status}</div>
-                            </div>
-                            <div id="tool-body-${idx}" class="claude-tool-body">
+                    html += `
+                        <details style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 16px; margin-top: 8px;">
+                            <summary style="cursor: pointer; font-family: var(--font-code); color: var(--accent-blue); font-weight: 600; font-size: 13px; outline: none; user-select: none;">
+                                🔨 Exécution des ${toolSequence.length} Outils OSINT (Cliquer pour ouvrir les détails)
+                            </summary>
+                            <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                                ${toolSequence.map((t, idx) => `
+                                    <div class="claude-tool-block">
+                                        <div class="claude-tool-header" onclick="toggleToolBody('tool-body-${idx}')">
+                                            <div class="tool-call-label">
+                                                <i data-lucide="wrench" style="width: 13px;"></i>
+                                                [Tool ${idx + 1}/${toolSequence.length}] ${escapeHtml(t.tool_name)}
+                                            </div>
+                                            <div class="tool-meta">⚡ ${t.duration_ms} ms • ${t.status}</div>
+                                        </div>
+                                        <div id="tool-body-${idx}" class="claude-tool-body">
 <strong>INPUT:</strong>
 ${escapeHtml(JSON.stringify(t.input, null, 2))}
 
 <strong>OUTPUT:</strong>
 ${escapeHtml(JSON.stringify(t.output, null, 2))}
+                                        </div>
+                                    </div>
+                                `).join('')}
                             </div>
-                        </div>
-                    `).join('');
+                        </details>
+                    `;
                 }
 
                 if (thinkingProcess) {
