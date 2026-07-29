@@ -15,7 +15,7 @@ if backend_dir not in sys.path:
 from app.config import settings
 from app.db.sqlite_fts import SQLiteFTSManager
 from app.core.llm_client import LLMClient
-from app.tools.osint_registries.jurisdiction_resolver import JurisdictionResolver
+from app.tools.osint_registries import JurisdictionResolver
 
 app = FastAPI(
     title="Autonomous OSINT & Deep Research 24/7 Platform",
@@ -34,7 +34,10 @@ app.add_middleware(
 # Initialisation de la base SQLite FTS5 au démarrage
 @app.on_event("startup")
 def startup_event():
-    SQLiteFTSManager.init_db()
+    try:
+        SQLiteFTSManager.init_db()
+    except Exception as e:
+        print(f"Note d'initialisation SQLite DB: {e}")
 
 class QueryRequest(BaseModel):
     query: str
@@ -57,7 +60,7 @@ async def run_investigation(req: QueryRequest):
         raise HTTPException(status_code=400, detail="Query cannot be empty")
     
     # Résolution de juridiction (Ex. Paradis Fiscaux, Sirene, SEC EDGAR)
-    jurisdiction_info = JurisdictionResolver.resolve(req.jurisdiction)
+    jurisdiction_info = JurisdictionResolver.detect_jurisdiction(req.query)
     
     # Interrogation LLM Qwen3.6-12B
     prompt = f"Effectue une analyse OSINT approfondie pour la cible suivante : '{req.query}'. Juridiction ciblée : {jurisdiction_info}."
