@@ -86,14 +86,21 @@ def serve_dashboard():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>🛡️ Autonomous OSINT 24/7 Deep Research</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+        <script src="https://unpkg.com/lucide@latest"></script>
         <style>
             :root {
                 --bg-primary: #0a0f1d;
                 --bg-secondary: #131c31;
-                --accent-blue: #00d2ff;
-                --accent-purple: #9254de;
+                --prompt-bg: #1F2023;
+                --prompt-border: #444444;
+                --accent-blue: #1EAEDB;
+                --accent-purple: #8B5CF6;
+                --accent-orange: #F97316;
                 --text-main: #f0f4f8;
-                --text-muted: #8c9ba5;
+                --text-muted: #9CA3AF;
+            }
+            * {
+                box-sizing: border-box;
             }
             body {
                 font-family: 'Inter', sans-serif;
@@ -115,73 +122,167 @@ def serve_dashboard():
             }
             header h1 {
                 margin: 0;
-                font-size: 24px;
-                background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+                font-size: 22px;
+                background: linear-gradient(90deg, #00d2ff, #9254de);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
+                display: flex;
+                align-items: center;
+                gap: 10px;
             }
             .container {
-                max-width: 1000px;
+                max-width: 850px;
+                width: 90%;
                 margin: 40px auto;
-                padding: 30px;
-                background: var(--bg-secondary);
-                border-radius: 16px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-                border: 1px solid rgba(255, 255, 255, 0.05);
             }
-            .form-group {
-                margin-bottom: 20px;
+            .hero-title {
+                text-align: center;
+                margin-bottom: 30px;
             }
-            label {
-                display: block;
-                margin-bottom: 8px;
-                color: var(--text-muted);
-                font-weight: 600;
-            }
-            input[type="text"] {
-                width: 100%;
-                padding: 14px;
-                background-color: #0d1527;
-                border: 1px solid #233554;
-                border-radius: 8px;
-                color: #fff;
-                font-size: 16px;
-                box-sizing: border-box;
-            }
-            input[type="text"]:focus {
-                outline: none;
-                border-color: var(--accent-blue);
-            }
-            button {
-                background: linear-gradient(90deg, #00d2ff, #0072ff);
-                color: #fff;
-                padding: 14px 28px;
-                border: none;
-                border-radius: 8px;
-                font-size: 16px;
+            .hero-title h2 {
+                font-size: 32px;
+                margin-bottom: 10px;
                 font-weight: 700;
+            }
+            .hero-title p {
+                color: var(--text-muted);
+                font-size: 16px;
+            }
+
+            /* AI Prompt Box Styled Component */
+            .ai-prompt-box {
+                background-color: var(--prompt-bg);
+                border: 1px solid var(--prompt-border);
+                border-radius: 24px;
+                padding: 12px 16px;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+                transition: all 0.3s ease;
+            }
+            .ai-prompt-box:focus-within {
+                border-color: #666666;
+            }
+            .file-previews {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            .preview-thumb {
+                width: 64px;
+                height: 64px;
+                border-radius: 12px;
+                overflow: hidden;
+                position: relative;
+            }
+            .preview-thumb img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .remove-btn {
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                background: rgba(0,0,0,0.7);
+                border: none;
+                border-radius: 50%;
+                color: white;
                 cursor: pointer;
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
+                padding: 2px;
+                display: flex;
             }
-            button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(0, 210, 255, 0.4);
+            textarea.prompt-textarea {
+                width: 100%;
+                background: transparent;
+                border: none;
+                color: #f3f4f6;
+                font-size: 16px;
+                font-family: inherit;
+                resize: none;
+                outline: none;
+                min-height: 48px;
+                max-height: 200px;
             }
-            #results-card {
-                margin-top: 30px;
-                padding: 20px;
-                background: #0d1527;
-                border-radius: 8px;
-                border: 1px solid #233554;
-                display: none;
+            textarea.prompt-textarea::placeholder {
+                color: #9CA3AF;
             }
-            pre {
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                color: #a6accd;
+            .prompt-actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-top: 8px;
+            }
+            .action-toggles {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .icon-btn {
+                background: transparent;
+                border: none;
+                color: #9CA3AF;
+                cursor: pointer;
+                padding: 6px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+            .icon-btn:hover {
+                background: rgba(255,255,255,0.1);
+                color: #D1D5DB;
+            }
+            .mode-toggle {
+                background: transparent;
+                border: 1px solid transparent;
+                color: #9CA3AF;
+                border-radius: 20px;
+                padding: 4px 10px;
+                font-size: 13px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s;
+            }
+            .mode-toggle.active-search {
+                background: rgba(30, 174, 219, 0.15);
+                border-color: #1EAEDB;
+                color: #1EAEDB;
+            }
+            .mode-toggle.active-think {
+                background: rgba(139, 92, 246, 0.15);
+                border-color: #8B5CF6;
+                color: #8B5CF6;
+            }
+            .mode-toggle.active-canvas {
+                background: rgba(249, 115, 22, 0.15);
+                border-color: #F97316;
+                color: #F97316;
+            }
+            .divider {
+                width: 1px;
+                height: 18px;
+                background: linear-gradient(to bottom, transparent, rgba(155,135,245,0.7), transparent);
+                margin: 0 2px;
+            }
+            .send-btn {
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                border: none;
+                background: white;
+                color: #1F2023;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+            .send-btn:hover {
+                background: #e5e7eb;
             }
             .status-badge {
-                display: inline-block;
                 padding: 4px 12px;
                 border-radius: 20px;
                 font-size: 12px;
@@ -189,24 +290,71 @@ def serve_dashboard():
                 background-color: #10b981;
                 color: #000;
             }
+            #results-card {
+                margin-top: 30px;
+                padding: 24px;
+                background: var(--bg-secondary);
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                display: none;
+            }
+            pre {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                color: #a6accd;
+                font-family: monospace;
+            }
         </style>
     </head>
     <body>
         <header>
-            <h1>🛡️ OSINT & Deep Research 24/7</h1>
+            <h1><i data-lucide="shield"></i> OSINT & Deep Research 24/7</h1>
             <span class="status-badge">ONLINE • 4 vCPU • Qwen3.6-12B</span>
         </header>
 
         <div class="container">
-            <h2>🔎 Lancer une Investigation OSINT</h2>
-            <p style="color: var(--text-muted);">Recherche multi-sources automatisée (Paradis fiscaux, Registres d'entreprises, FTS5 Instantané)</p>
-            
-            <div class="form-group">
-                <label for="query">Cible (Nom d'entreprise, Individu, Siren, LEI, Domaine)</label>
-                <input type="text" id="query" placeholder="Ex: Acme Corporation, Cayman Offshore, Sirene 123456789...">
+            <div class="hero-title">
+                <h2>🔎 Quelle est votre cible OSINT aujourd'hui ?</h2>
+                <p>Recherche multi-sources automatisée (Sociétés, Paradis Fiscaux, Registres Internationaux & FTS5 Instantané)</p>
             </div>
 
-            <button onclick="runSearch()">🚀 Démarrer l'Investigation</button>
+            <!-- Integrated AI Prompt Box Component -->
+            <div class="ai-prompt-box">
+                <div id="file-previews" class="file-previews"></div>
+                <textarea id="prompt-input" class="prompt-textarea" placeholder="Entrez un nom d'entreprise, individu, SIREN, LEI ou domaine... (Appuyez sur Entrée)"></textarea>
+                
+                <div class="prompt-actions">
+                    <div class="action-toggles">
+                        <label class="icon-btn" title="Joindre un fichier/image">
+                            <i data-lucide="paperclip" style="width: 18px; height: 18px;"></i>
+                            <input type="file" id="file-input" style="display: none;" accept="image/*" onchange="handleFileSelect(event)">
+                        </label>
+
+                        <button id="toggle-search" class="mode-toggle" onclick="toggleMode('search')">
+                            <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+                            <span>Search</span>
+                        </button>
+
+                        <div class="divider"></div>
+
+                        <button id="toggle-think" class="mode-toggle" onclick="toggleMode('think')">
+                            <i data-lucide="brain-cog" style="width: 16px; height: 16px;"></i>
+                            <span>Think</span>
+                        </button>
+
+                        <div class="divider"></div>
+
+                        <button id="toggle-canvas" class="mode-toggle" onclick="toggleMode('canvas')">
+                            <i data-lucide="folder-code" style="width: 16px; height: 16px;"></i>
+                            <span>Canvas</span>
+                        </button>
+                    </div>
+
+                    <button id="send-btn" class="send-btn" onclick="submitSearch()">
+                        <i data-lucide="arrow-up" style="width: 18px; height: 18px;"></i>
+                    </button>
+                </div>
+            </div>
 
             <div id="results-card">
                 <h3>📊 Résultats de l'Investigation</h3>
@@ -215,21 +363,79 @@ def serve_dashboard():
         </div>
 
         <script>
-            async function runSearch() {
-                const query = document.getElementById('query').value;
-                if (!query) return alert('Veuillez entrer une cible !');
+            lucide.createIcons();
+
+            let activeMode = null;
+            let attachedFile = null;
+
+            function toggleMode(mode) {
+                const searchBtn = document.getElementById('toggle-search');
+                const thinkBtn = document.getElementById('toggle-think');
+                const canvasBtn = document.getElementById('toggle-canvas');
+
+                if (activeMode === mode) {
+                    activeMode = null;
+                    searchBtn.className = 'mode-toggle';
+                    thinkBtn.className = 'mode-toggle';
+                    canvasBtn.className = 'mode-toggle';
+                } else {
+                    activeMode = mode;
+                    searchBtn.className = 'mode-toggle ' + (mode === 'search' ? 'active-search' : '');
+                    thinkBtn.className = 'mode-toggle ' + (mode === 'think' ? 'active-think' : '');
+                    canvasBtn.className = 'mode-toggle ' + (mode === 'canvas' ? 'active-canvas' : '');
+                }
+            }
+
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                attachedFile = file;
+                const container = document.getElementById('file-previews');
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    container.innerHTML = `
+                        <div class="preview-thumb">
+                            <img src="${e.target.result}" alt="Preview">
+                            <button class="remove-btn" onclick="removeFile()"><i data-lucide="x" style="width: 12px; height: 12px;"></i></button>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function removeFile() {
+                attachedFile = null;
+                document.getElementById('file-previews').innerHTML = '';
+            }
+
+            document.getElementById('prompt-input').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitSearch();
+                }
+            });
+
+            async function submitSearch() {
+                const query = document.getElementById('prompt-input').value.trim();
+                if (!query && !attachedFile) return alert('Veuillez entrer une cible !');
 
                 const card = document.getElementById('results-card');
                 const content = document.getElementById('results-content');
                 
                 card.style.display = 'block';
-                content.innerHTML = '<p style="color: #00d2ff;">⏳ Recherche en cours via Qwen3.6-12B et les 45 micro-outils OSINT...</p>';
+                content.innerHTML = '<p style="color: #1EAEDB;">⏳ Recherche en cours via Qwen3.6-12B et les registres OSINT (Mode: ' + (activeMode || 'Standard') + ')...</p>';
+
+                let fullQuery = query;
+                if (activeMode) {
+                    fullQuery = `[${activeMode.toUpperCase()}] ${query}`;
+                }
 
                 try {
                     const res = await fetch('/api/investigate', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query: query })
+                        body: JSON.stringify({ query: fullQuery })
                     });
                     const data = await res.json();
                     content.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
