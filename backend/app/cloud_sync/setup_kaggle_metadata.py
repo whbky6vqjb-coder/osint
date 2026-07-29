@@ -14,9 +14,10 @@ def setup_metadata():
             data = json.load(f)
         data["id"] = f"{username}/osint-agent-247-runner"
         data["title"] = "osint-agent-247-runner"
+        data["enable_gpu"] = "false"  # Mode CPU 100% Gratuit & Illimité (0 minute de quota GPU consommée)
         with open(metadata_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
-        print(f"Metadata configurée avec id: {data['id']}")
+        print(f"Metadata configurée avec id: {data['id']} (Mode CPU Pure Illimité)")
 
     # Injection automatique du dépôt GitHub réel dans le Notebook Kaggle
     notebook_path = "./kaggle_runtime/kaggle_osint_runner.ipynb"
