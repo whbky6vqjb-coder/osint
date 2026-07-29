@@ -620,15 +620,15 @@ def serve_dashboard():
                             </button>
                         </div>
 
-                        <button id="action-btn" class="action-btn" onclick="handleActionClick()" title="Envoyer">
+                        <button id="action-btn" class="action-btn" type="button" onclick="handleActionClick(event)" title="Envoyer">
                             <!-- Flèche épurée SVG -->
-                            <svg id="arrow-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="19" x2="12" y2="5"></line>
-                                <polyline points="5 12 12 5 19 12"></polyline>
+                            <svg id="arrow-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
+                                <line x1="12" y1="19" x2="12" y2="5" style="pointer-events: none;"></line>
+                                <polyline points="5 12 12 5 19 12" style="pointer-events: none;"></polyline>
                             </svg>
                             <!-- Icône Stop Carré -->
-                            <svg id="stop-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:none;">
-                                <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                            <svg id="stop-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:none; pointer-events: none;">
+                                <rect x="4" y="4" width="16" height="16" rx="2" style="pointer-events: none;"></rect>
                             </svg>
                         </button>
                     </div>
@@ -637,11 +637,18 @@ def serve_dashboard():
         </main>
 
         <script>
-            lucide.createIcons();
             let activeMode = null;
             let currentAbortController = null;
 
-            loadHistory();
+            function safeIcons() {
+                try {
+                    if (typeof lucide !== 'undefined' && lucide && lucide.createIcons) {
+                        lucide.createIcons();
+                    }
+                } catch(e) {
+                    console.warn("Lucide icons notice:", e);
+                }
+            }
 
             async function loadHistory() {
                 const list = document.getElementById('history-list');
@@ -653,12 +660,12 @@ def serve_dashboard():
                         return;
                     }
                     list.innerHTML = data.investigations.map(inv => `
-                        <div class="history-item" onclick="loadInvestigationDetail('${inv.id}')">
+                        <div class="history-item" onclick="loadInvestigationDetail('${escapeHtml(inv.id)}')">
                             <i data-lucide="terminal" style="width: 12px;"></i>
                             <div class="title">${escapeHtml(inv.target)}</div>
                         </div>
                     `).join('');
-                    lucide.createIcons();
+                    safeIcons();
                 } catch(e) {
                     list.innerHTML = '<div style="font-size:11px; color:#ef4444;">Erreur historique.</div>';
                 }
@@ -687,7 +694,7 @@ def serve_dashboard():
 
                     renderClaudeSession(inv.target, sequence, thoughtLog ? thoughtLog.content : '', reportLog ? reportLog.content : inv.summary);
                 } catch(e) {
-                    chatContainer.innerHTML = '<div style="color: #ef4444;">Erreur de rechargement.</div>';
+                    chatContainer.innerHTML = '<div style="color: #ef4444;">Erreur de rechargement : ' + escapeHtml(e.message) + '</div>';
                 }
             }
 
@@ -739,7 +746,7 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                 }
 
                 chatContainer.innerHTML = html;
-                lucide.createIcons();
+                safeIcons();
             }
 
             function toggleToolBody(id) {
@@ -765,9 +772,12 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                 }
             }
 
-            function handleActionClick() {
+            function handleActionClick(event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
                 if (currentAbortController) {
-                    // STOP DIRECT SI EN COURS !
                     currentAbortController.abort();
                     currentAbortController = null;
                     setBtnState(false);
@@ -796,13 +806,6 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                     btn.title = "Envoyer";
                 }
             }
-
-            document.getElementById('prompt-input').addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    if (!currentAbortController) submitSearch();
-                }
-            });
 
             async function submitSearch() {
                 const promptInput = document.getElementById('prompt-input');
@@ -867,6 +870,24 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&#039;");
             }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                safeIcons();
+                loadHistory();
+                const btn = document.getElementById('action-btn');
+                if (btn) {
+                    btn.addEventListener('click', handleActionClick);
+                }
+                const input = document.getElementById('prompt-input');
+                if (input) {
+                    input.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleActionClick(e);
+                        }
+                    });
+                }
+            });
         </script>
     </body>
     </html>

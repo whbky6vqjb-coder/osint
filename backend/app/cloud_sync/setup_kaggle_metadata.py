@@ -30,10 +30,12 @@ def setup_metadata():
         if repo_name and gh_token:
             tokenized_url = f"https://x-access-token:{gh_token}@github.com/{repo_name}.git"
             content = content.replace("https://github.com/your-repo/projet_osint.git", tokenized_url)
+            content = content.replace("https://github.com/whbky6vqjb-coder/osint.git", tokenized_url)
             print(f"Notebook mis à jour avec le jeton d'accès privé GitHub pour : {repo_name}")
         elif repo_name:
             public_git_url = f"https://github.com/{repo_name}.git"
             content = content.replace("https://github.com/your-repo/projet_osint.git", public_git_url)
+            content = content.replace("https://github.com/whbky6vqjb-coder/osint.git", public_git_url)
             print(f"Notebook mis à jour avec l'URL publique Git : {public_git_url}")
 
         with open(notebook_path, "w", encoding="utf-8") as f:
