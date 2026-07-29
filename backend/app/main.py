@@ -142,6 +142,7 @@ async def run_investigation(req: QueryRequest):
     oc_results = await OSINTRegistriesTool.query_opencorporates(target_clean)
     gleif_results = await OSINTRegistriesTool.query_gleif_lei(target_clean)
     sirene_results = await OSINTRegistriesTool.query_insee_sirene(target_clean)
+    breach_results = await OSINTRegistriesTool.query_breach_databases(target_clean)
 
     # Remplissage exhaustif de la séquence des 45 Outils OSINT
     for idx, (t_name, t_cat) in enumerate(ALL_45_OSINT_TOOLS[:-1], 1):
@@ -159,6 +160,8 @@ async def run_investigation(req: QueryRequest):
             output_data = gleif_results
         elif "insee_sirene" in t_name:
             output_data = sirene_results
+        elif "data_breach" in t_name or "breach_database" in t_name or "credential_dump" in t_name:
+            output_data = breach_results
         else:
             output_data = {
                 "target": target_clean,
@@ -611,19 +614,9 @@ def serve_dashboard():
                     <textarea id="prompt-input" class="prompt-textarea" placeholder="Entrez une cible (Entreprise, SIREN, LEI, Domaine)..."></textarea>
                     
                     <div class="input-actions">
-                        <div class="mode-toggles">
-                            <button id="toggle-search" class="btn-mode" onclick="toggleMode('search')">
-                                <i data-lucide="globe" style="width: 13px;"></i>
-                                <span>Search</span>
-                            </button>
-                            <button id="toggle-think" class="btn-mode" onclick="toggleMode('think')">
-                                <i data-lucide="brain" style="width: 13px;"></i>
-                                <span>Think</span>
-                            </button>
-                            <button id="toggle-canvas" class="btn-mode" onclick="toggleMode('canvas')">
-                                <i data-lucide="code" style="width: 13px;"></i>
-                                <span>Canvas</span>
-                            </button>
+                        <div style="display: flex; items-center: center; gap: 8px; font-family: var(--font-code); font-size: 11.5px; color: var(--accent-claude);">
+                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; animation: blink 1.5s infinite;"></span>
+                            <span>⚡ 45 Outils OSINT + Bases Leakkées • Mode Recherche Preuves Continue</span>
                         </div>
 
                         <button id="action-btn" class="action-btn" type="button" title="Envoyer">
@@ -768,23 +761,7 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                 if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
             }
 
-            function toggleMode(mode) {
-                const searchBtn = document.getElementById('toggle-search');
-                const thinkBtn = document.getElementById('toggle-think');
-                const canvasBtn = document.getElementById('toggle-canvas');
 
-                if (activeMode === mode) {
-                    activeMode = null;
-                    searchBtn.className = 'btn-mode';
-                    thinkBtn.className = 'btn-mode';
-                    canvasBtn.className = 'btn-mode';
-                } else {
-                    activeMode = mode;
-                    searchBtn.className = ('btn-mode ' + (mode === 'search' ? 'active-search' : '')).trim();
-                    thinkBtn.className = ('btn-mode ' + (mode === 'think' ? 'active-think' : '')).trim();
-                    canvasBtn.className = ('btn-mode ' + (mode === 'canvas' ? 'active-canvas' : '')).trim();
-                }
-            }
 
             function handleActionClick(event) {
                 if (event) {
@@ -842,7 +819,6 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                 `;
 
                 let fullQuery = query;
-                if (activeMode) fullQuery = `[${activeMode.toUpperCase()}] ${query}`;
 
                 try {
                     const res = await fetch('/api/investigate', {
