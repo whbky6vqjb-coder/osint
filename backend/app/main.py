@@ -142,7 +142,7 @@ async def run_investigation(req: QueryRequest):
     gleif_results = await OSINTRegistriesTool.query_gleif_lei(target_clean)
     sirene_results = await OSINTRegistriesTool.query_insee_sirene(target_clean)
 
-    # Remplissage exhaustif de la séquence des 45 Outils OSINT (Format Claude Code)
+    # Remplissage exhaustif de la séquence des 45 Outils OSINT
     for idx, (t_name, t_cat) in enumerate(ALL_45_OSINT_TOOLS[:-1], 1):
         t_start = time.time()
         
@@ -546,14 +546,14 @@ def serve_dashboard():
             .mode-toggles {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 8px;
             }
             .btn-mode {
                 background: transparent;
                 border: 1px solid transparent;
                 color: var(--text-muted);
                 border-radius: 16px;
-                padding: 4px 10px;
+                padding: 5px 12px;
                 font-size: 12px;
                 font-family: var(--font-code);
                 cursor: pointer;
@@ -576,26 +576,35 @@ def serve_dashboard():
                 border-color: var(--accent-purple);
                 color: var(--accent-purple);
             }
+            .btn-mode.active-canvas {
+                background: rgba(249, 115, 22, 0.15);
+                border-color: #f97316;
+                color: #f97316;
+            }
+            
+            /* Fleche d'envoi épurée */
             .send-btn-claude {
-                width: 36px;
-                height: 36px;
+                width: 34px;
+                height: 34px;
                 border-radius: 50%;
                 border: none;
-                background: var(--accent-claude);
-                color: #000;
+                background: #ffffff;
+                color: #0e0e11;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                transition: all 0.2s;
-                font-weight: 700;
+                transition: all 0.2s ease;
             }
             .send-btn-claude:hover {
-                transform: scale(1.06);
-                background: #e08769;
+                background: var(--accent-claude);
+                color: #ffffff;
+                transform: translateY(-1px);
             }
             .send-btn-claude.loading {
                 animation: spin 1s linear infinite;
+                background: var(--accent-blue);
+                color: #ffffff;
             }
             @keyframes spin { 100% { transform: rotate(360deg); } }
         </style>
@@ -617,7 +626,7 @@ def serve_dashboard():
             <header>
                 <div class="header-left">
                     <span>Claude Code v2.0 • OSINT Agent</span>
-                    <span class="model-badge">Qwen3.6-12B-GGUF (CPU)</span>
+                    <span class="model-badge">Qwen3.6-12B (CPU)</span>
                 </div>
                 <div class="status-indicator">
                     <div class="status-dot"></div>
@@ -653,8 +662,12 @@ def serve_dashboard():
                             </button>
                         </div>
 
-                        <button id="send-btn" class="send-btn-claude" onclick="submitSearch()">
-                            <i data-lucide="arrow-up" style="width: 18px;"></i>
+                        <button id="send-btn" class="send-btn-claude" onclick="submitSearch()" title="Envoyer la requête">
+                            <!-- Flèche épurée SVG -->
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="19" x2="12" y2="5"></line>
+                                <polyline points="5 12 12 5 19 12"></polyline>
+                            </svg>
                         </button>
                     </div>
                 </div>
