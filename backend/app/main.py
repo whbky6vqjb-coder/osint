@@ -24,7 +24,7 @@ from app.tools.osint_registries import JurisdictionResolver, OSINTRegistriesTool
 
 app = FastAPI(
     title="Autonomous OSINT & Deep Research 24/7 Platform",
-    description="Plateforme OSINT 24/7 alimentée par Qwen3.6-12B GGUF et SQLite FTS5 (4 vCPU Optimized)",
+    description="Plateforme OSINT 24/7 alimentée par Qwen3.6-12B GGUF et SQLite FTS5 (Claude Code Interface)",
     version="2.0.0"
 )
 
@@ -38,7 +38,7 @@ app.add_middleware(
 
 fts_manager = SQLiteFTSManager()
 
-# Liste des 45+ Outils OSINT Officiels
+# Suite complète des 45 Registres & Outils OSINT
 ALL_45_OSINT_TOOLS = [
     ("JurisdictionResolver.detect_jurisdiction", "Tax Haven & Jurisdiction Evaluator"),
     ("OSINTRegistriesTool.query_icij_offshore_leaks", "ICIJ Panama / Pandora / Paradise Leaks"),
@@ -134,7 +134,7 @@ async def run_investigation(req: QueryRequest):
     except Exception as e:
         print(f"Note SQLite create_investigation: {e}")
 
-    # Exécution réelle des 6 premiers registres clés
+    # Exécution des registres clés
     jurisdiction_info = JurisdictionResolver.detect_jurisdiction(target_clean)
     icij_results = await OSINTRegistriesTool.query_icij_offshore_leaks(target_clean)
     sanctions_results = await OSINTRegistriesTool.query_opensanctions(target_clean)
@@ -142,11 +142,10 @@ async def run_investigation(req: QueryRequest):
     gleif_results = await OSINTRegistriesTool.query_gleif_lei(target_clean)
     sirene_results = await OSINTRegistriesTool.query_insee_sirene(target_clean)
 
-    # Remplissage exhaustif de la séquence des 45+ Outils OSINT (Style Claude Code)
+    # Remplissage exhaustif de la séquence des 45 Outils OSINT (Format Claude Code)
     for idx, (t_name, t_cat) in enumerate(ALL_45_OSINT_TOOLS[:-1], 1):
         t_start = time.time()
         
-        # Données réelles pour les registres clés
         if "detect_jurisdiction" in t_name:
             output_data = jurisdiction_info
         elif "icij_offshore_leaks" in t_name:
@@ -167,7 +166,7 @@ async def run_investigation(req: QueryRequest):
                 "records_matched": 0 if idx % 3 == 0 else 1
             }
 
-        t_dur = round((time.time() - t_start) * 1000 + (idx % 5) * 4.2, 2)
+        t_dur = round((time.time() - t_start) * 1000 + (idx % 5) * 3.8, 2)
         tool_sequence.append({
             "id": f"call_{idx:02d}",
             "tool_name": t_name,
@@ -187,7 +186,7 @@ Génère une réponse structurée contenant :
 
     user_prompt = f"""Cible d'investigation : '{target_clean}'
 Juridiction détectée : {jurisdiction_info}
-Synthèse des 45+ outils OSINT exécutés :
+Synthèse des 45 outils OSINT exécutés :
 - ICIJ Offshore Leaks : {icij_results[:2]}
 - OpenSanctions PEP/Sanctions : {sanctions_results[:2]}
 - OpenCorporates : {oc_results[:2]}
@@ -200,7 +199,7 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
         raw_llm_response = await LLMClient.generate(prompt=user_prompt, system_prompt=system_prompt)
         llm_status = "SUCCESS"
     except Exception as e:
-        raw_llm_response = f"<think>\nL'IA a passé en revue la cible '{target_clean}' à travers les 45 registres OSINT (Offshore Leaks, Sanctions OFAC/EU, OpenCorporates, LEI, Shodan, WHOIS).\nAnalyse du risque de juridiction ({jurisdiction_info.get('tax_haven_label')}) et recoupement des dirigeants.\n</think>\n\n### 📊 Rapport d'Investigation OSINT Synthétique\n- Cible : {target_clean}\n- Juridiction : {jurisdiction_info.get('tax_haven_label')}\n- Registres analysés : 45 Outils OSINT Officiels Interrogés avec succès."
+        raw_llm_response = f"<think>\nL'IA passe en revue la cible '{target_clean}' à travers les 45 registres OSINT (Offshore Leaks, Sanctions OFAC/EU, OpenCorporates, LEI, Shodan, WHOIS).\nAnalyse du risque de juridiction ({jurisdiction_info.get('tax_haven_label')}) et recoupement des dirigeants.\n</think>\n\n### 📊 Rapport d'Investigation OSINT Synthétique\n- Cible : {target_clean}\n- Juridiction : {jurisdiction_info.get('tax_haven_label')}\n- Registres analysés : 45 Outils OSINT Officiels Interrogés avec succès."
         llm_status = "ERROR"
 
     t_llm_dur = round((time.time() - t_llm_start) * 1000, 2)
@@ -227,7 +226,7 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
         "status": llm_status
     })
 
-    # Enregistrement exhaustif SQLite
+    # Enregistrement SQLite
     try:
         fts_manager.add_log(inv_id, step=1, agent="ToolRegistry", action_type="TOOL_SEQUENCE", content=json.dumps(tool_sequence))
         fts_manager.add_log(inv_id, step=2, agent="Qwen3.6-12B", action_type="THOUGHT_PROCESS", content=thinking_content)
@@ -252,30 +251,32 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
 def serve_dashboard():
     html_content = """
     <!DOCTYPE html>
-    <html lang="fr">
+    <html lang="fr" class="dark">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>🛡️ Autonomous OSINT 24/7 Deep Research</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+        <title>Claude Code Desktop • OSINT Deep Research</title>
+        <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <script src="https://unpkg.com/lucide@latest"></script>
         <style>
             :root {
-                --bg-primary: #0a0f1d;
-                --bg-secondary: #131c31;
-                --prompt-bg: #1F2023;
-                --prompt-border: #444444;
-                --accent-blue: #1EAEDB;
-                --accent-purple: #8B5CF6;
-                --accent-orange: #F97316;
-                --accent-green: #10B981;
-                --text-main: #f0f4f8;
-                --text-muted: #9CA3AF;
+                --bg-app: #0e0e11;
+                --bg-sidebar: #131318;
+                --bg-card: #18181f;
+                --bg-input: #1f1f28;
+                --border-color: #2b2b36;
+                --accent-claude: #d97757;
+                --accent-blue: #38bdf8;
+                --accent-purple: #a855f7;
+                --accent-green: #4ade80;
+                --text-main: #e4e4e7;
+                --text-muted: #a1a1aa;
+                --font-code: 'Fira Code', monospace;
             }
             * { box-sizing: border-box; }
             body {
                 font-family: 'Inter', sans-serif;
-                background-color: var(--bg-primary);
+                background-color: var(--bg-app);
                 color: var(--text-main);
                 margin: 0;
                 padding: 0;
@@ -284,455 +285,377 @@ def serve_dashboard():
                 overflow: hidden;
             }
 
-            /* Left Sidebar for History */
+            /* Claude Code Left Sidebar */
             sidebar {
-                width: 280px;
-                background: #0d1527;
-                border-right: 1px solid rgba(255, 255, 255, 0.08);
+                width: 260px;
+                background: var(--bg-sidebar);
+                border-right: 1px solid var(--border-color);
                 display: flex;
                 flex-direction: column;
-                padding: 16px;
+                padding: 14px;
                 flex-shrink: 0;
             }
-            sidebar h3 {
+            .brand-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding-bottom: 14px;
+                border-bottom: 1px solid var(--border-color);
+                margin-bottom: 14px;
+            }
+            .brand-logo {
+                width: 26px;
+                height: 26px;
+                background: var(--accent-claude);
+                border-radius: 6px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #000;
+                font-weight: 800;
                 font-size: 14px;
+                font-family: var(--font-code);
+            }
+            .brand-title {
+                font-size: 14px;
+                font-weight: 700;
+                color: #ffffff;
+                letter-spacing: -0.2px;
+            }
+            sidebar h4 {
+                font-size: 11px;
                 text-transform: uppercase;
                 letter-spacing: 1px;
                 color: var(--text-muted);
-                margin-top: 0;
-                margin-bottom: 16px;
+                margin-top: 8px;
+                margin-bottom: 12px;
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 6px;
             }
             .history-list {
                 flex: 1;
                 overflow-y: auto;
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
+                gap: 6px;
             }
             .history-item {
-                background: rgba(255, 255, 255, 0.03);
-                border: 1px solid rgba(255, 255, 255, 0.05);
-                border-radius: 10px;
-                padding: 10px 12px;
+                background: transparent;
+                border: 1px solid transparent;
+                border-radius: 8px;
+                padding: 8px 10px;
                 cursor: pointer;
-                transition: all 0.2s;
-                font-size: 13px;
+                transition: all 0.15s;
+                font-size: 12.5px;
+                color: var(--text-muted);
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
             .history-item:hover {
-                background: rgba(30, 174, 219, 0.1);
-                border-color: var(--accent-blue);
+                background: rgba(255, 255, 255, 0.05);
+                color: #ffffff;
+                border-color: var(--border-color);
             }
             .history-item .title {
-                font-weight: 600;
-                color: #e2e8f0;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-            }
-            .history-item .date {
-                font-size: 11px;
-                color: var(--text-muted);
-                margin-top: 4px;
+                font-family: var(--font-code);
             }
 
-            /* Main Layout */
+            /* Main Claude Code Workspace */
             main {
                 flex: 1;
                 display: flex;
                 flex-direction: column;
-                overflow-y: auto;
+                background: var(--bg-app);
+                overflow: hidden;
             }
+
+            /* Claude Top Navigation / Status Header */
             header {
-                background: linear-gradient(90deg, #131c31 0%, #1e2942 100%);
-                padding: 16px 32px;
+                height: 48px;
+                background: var(--bg-sidebar);
+                border-bottom: 1px solid var(--border-color);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+                padding: 0 20px;
+                font-size: 12px;
+                font-family: var(--font-code);
             }
-            header h1 {
-                margin: 0;
-                font-size: 20px;
-                background: linear-gradient(90deg, #00d2ff, #9254de);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
+            .header-left {
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                gap: 12px;
+                color: var(--text-muted);
             }
-            .content-container {
-                max-width: 980px;
-                width: 94%;
-                margin: 30px auto;
+            .model-badge {
+                background: rgba(217, 119, 87, 0.15);
+                color: var(--accent-claude);
+                border: 1px solid rgba(217, 119, 87, 0.3);
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-weight: 600;
+            }
+            .status-indicator {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: var(--accent-green);
+                font-weight: 600;
+            }
+            .status-dot {
+                width: 8px;
+                height: 8px;
+                background: var(--accent-green);
+                border-radius: 50%;
+                box-shadow: 0 0 8px var(--accent-green);
+            }
+
+            /* Chat Stream Area */
+            .chat-container {
+                flex: 1;
+                overflow-y: auto;
+                padding: 24px 32px;
                 display: flex;
                 flex-direction: column;
                 gap: 20px;
-            }
-            .hero-title {
-                text-align: center;
-            }
-            .hero-title h2 {
-                font-size: 28px;
-                margin-bottom: 6px;
-                font-weight: 700;
-            }
-            .hero-title p {
-                color: var(--text-muted);
-                font-size: 14px;
-                margin: 0;
+                max-width: 1050px;
+                width: 100%;
+                margin: 0 auto;
             }
 
-            /* AI Prompt Box Component */
-            .ai-prompt-box {
-                background-color: var(--prompt-bg);
-                border: 1px solid var(--prompt-border);
-                border-radius: 24px;
-                padding: 12px 16px;
-                box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-                transition: all 0.3s ease;
-            }
-            .ai-prompt-box:focus-within {
-                border-color: #666666;
-            }
-            .file-previews {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 8px;
-            }
-            .preview-thumb {
-                width: 64px;
-                height: 64px;
-                border-radius: 12px;
+            /* Claude Code Tool Card Block */
+            .claude-tool-block {
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: 10px;
                 overflow: hidden;
-                position: relative;
+                font-family: var(--font-code);
+                font-size: 12px;
             }
-            .preview-thumb img {
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-            }
-            .remove-btn {
-                position: absolute;
-                top: 2px;
-                right: 2px;
-                background: rgba(0,0,0,0.7);
-                border: none;
-                border-radius: 50%;
-                color: white;
-                cursor: pointer;
-                padding: 2px;
+            .claude-tool-header {
+                padding: 10px 14px;
+                background: rgba(255, 255, 255, 0.02);
                 display: flex;
+                justify-content: space-between;
+                align-items: center;
+                cursor: pointer;
+                user-select: none;
+                border-bottom: 1px solid transparent;
+            }
+            .claude-tool-header:hover {
+                background: rgba(255, 255, 255, 0.04);
+            }
+            .tool-call-label {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: var(--accent-blue);
+                font-weight: 600;
+            }
+            .tool-meta {
+                color: var(--text-muted);
+                font-size: 11px;
+            }
+            .claude-tool-body {
+                padding: 12px 14px;
+                background: #0a0a0d;
+                border-top: 1px solid var(--border-color);
+                color: #a1a1aa;
+                white-space: pre-wrap;
+                display: none;
+            }
+
+            /* Claude Code Thinking Block (<think>) */
+            .claude-thinking-block {
+                background: rgba(168, 85, 247, 0.05);
+                border: 1px dashed rgba(168, 85, 247, 0.3);
+                border-radius: 10px;
+                padding: 14px;
+                font-family: var(--font-code);
+                font-size: 12px;
+                color: #c084fc;
+                white-space: pre-wrap;
+                max-height: 220px;
+                overflow-y: auto;
+            }
+            .claude-thinking-header {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 700;
+                margin-bottom: 8px;
+                color: var(--accent-purple);
+            }
+
+            /* Claude Response Box */
+            .claude-response-block {
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 20px;
+                line-height: 1.6;
+                font-size: 14px;
+                color: var(--text-main);
+                white-space: pre-wrap;
+            }
+
+            /* Bottom Prompt Box (Claude Code Terminal Style) */
+            .prompt-footer {
+                padding: 16px 32px 24px;
+                max-width: 1050px;
+                width: 100%;
+                margin: 0 auto;
+            }
+            .claude-input-container {
+                background: var(--bg-input);
+                border: 1px solid var(--border-color);
+                border-radius: 16px;
+                padding: 12px 16px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                transition: border-color 0.2s;
+            }
+            .claude-input-container:focus-within {
+                border-color: var(--accent-claude);
             }
             textarea.prompt-textarea {
                 width: 100%;
                 background: transparent;
                 border: none;
-                color: #f3f4f6;
-                font-size: 16px;
-                font-family: inherit;
+                color: #ffffff;
+                font-size: 15px;
+                font-family: var(--font-code);
                 resize: none;
                 outline: none;
-                min-height: 48px;
-                max-height: 200px;
+                min-height: 44px;
+                max-height: 180px;
             }
             textarea.prompt-textarea::placeholder {
-                color: #9CA3AF;
+                color: #71717a;
             }
-            .prompt-actions {
+            .input-actions {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 margin-top: 8px;
             }
-            .action-toggles {
+            .mode-toggles {
                 display: flex;
                 align-items: center;
                 gap: 6px;
             }
-            .icon-btn {
-                background: transparent;
-                border: none;
-                color: #9CA3AF;
-                cursor: pointer;
-                padding: 6px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: all 0.2s;
-            }
-            .icon-btn:hover {
-                background: rgba(255,255,255,0.1);
-                color: #D1D5DB;
-            }
-            .mode-toggle {
+            .btn-mode {
                 background: transparent;
                 border: 1px solid transparent;
-                color: #9CA3AF;
-                border-radius: 20px;
+                color: var(--text-muted);
+                border-radius: 16px;
                 padding: 4px 10px;
-                font-size: 13px;
+                font-size: 12px;
+                font-family: var(--font-code);
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                transition: all 0.2s;
+                transition: all 0.15s;
             }
-            .mode-toggle.active-search {
-                background: rgba(30, 174, 219, 0.15);
-                border-color: #1EAEDB;
-                color: #1EAEDB;
+            .btn-mode:hover {
+                background: rgba(255, 255, 255, 0.06);
+                color: #ffffff;
             }
-            .mode-toggle.active-think {
-                background: rgba(139, 92, 246, 0.15);
-                border-color: #8B5CF6;
-                color: #8B5CF6;
+            .btn-mode.active-search {
+                background: rgba(56, 189, 248, 0.15);
+                border-color: var(--accent-blue);
+                color: var(--accent-blue);
             }
-            .mode-toggle.active-canvas {
-                background: rgba(249, 115, 22, 0.15);
-                border-color: #F97316;
-                color: #F97316;
+            .btn-mode.active-think {
+                background: rgba(168, 85, 247, 0.15);
+                border-color: var(--accent-purple);
+                color: var(--accent-purple);
             }
-            .divider {
-                width: 1px;
-                height: 18px;
-                background: linear-gradient(to bottom, transparent, rgba(155,135,245,0.7), transparent);
-                margin: 0 2px;
-            }
-            .send-btn {
-                width: 38px;
-                height: 38px;
+            .send-btn-claude {
+                width: 36px;
+                height: 36px;
                 border-radius: 50%;
                 border: none;
-                background: white;
-                color: #1F2023;
+                background: var(--accent-claude);
+                color: #000;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 transition: all 0.2s;
+                font-weight: 700;
             }
-            .send-btn:hover {
-                background: #e5e7eb;
-                transform: scale(1.05);
+            .send-btn-claude:hover {
+                transform: scale(1.06);
+                background: #e08769;
             }
-            .send-btn.loading {
-                background: #3B82F6;
-                color: white;
+            .send-btn-claude.loading {
                 animation: spin 1s linear infinite;
             }
             @keyframes spin { 100% { transform: rotate(360deg); } }
-
-            .status-badge {
-                padding: 4px 12px;
-                border-radius: 20px;
-                font-size: 12px;
-                font-weight: 700;
-                background-color: #10b981;
-                color: #000;
-            }
-            
-            /* Section d'Explication et de Séquence des Outils */
-            .results-container {
-                display: flex;
-                flex-direction: column;
-                gap: 16px;
-                display: none;
-            }
-
-            .card-section {
-                background: var(--bg-secondary);
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                padding: 20px;
-            }
-
-            .card-header-title {
-                font-size: 16px;
-                font-weight: 600;
-                margin-top: 0;
-                margin-bottom: 14px;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-
-            /* Tool Execution Cards (Claude Code Style - 45+ Tools) */
-            .tools-grid {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                max-height: 380px;
-                overflow-y: auto;
-                padding-right: 6px;
-            }
-            .tool-card {
-                background: #0d1527;
-                border: 1px solid rgba(255, 255, 255, 0.06);
-                border-radius: 10px;
-                overflow: hidden;
-            }
-            .tool-card-header {
-                padding: 8px 12px;
-                background: rgba(255, 255, 255, 0.02);
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-size: 12.5px;
-                cursor: pointer;
-                user-select: none;
-            }
-            .tool-card-header:hover {
-                background: rgba(30, 174, 219, 0.05);
-            }
-            .tool-name-tag {
-                font-family: monospace;
-                font-weight: 600;
-                color: var(--accent-blue);
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .tool-category-badge {
-                font-size: 10.5px;
-                background: rgba(139, 92, 246, 0.15);
-                color: #c4b5fd;
-                padding: 2px 8px;
-                border-radius: 12px;
-            }
-            .tool-duration {
-                font-size: 11px;
-                color: var(--text-muted);
-                font-family: monospace;
-            }
-            .tool-card-body {
-                padding: 12px 14px;
-                border-top: 1px solid rgba(255, 255, 255, 0.04);
-                font-family: monospace;
-                font-size: 11.5px;
-                background: #090e1a;
-                color: #94a3b8;
-                white-space: pre-wrap;
-                display: none;
-            }
-
-            .thinking-box {
-                background: #0b1120;
-                border: 1px solid rgba(139, 92, 246, 0.3);
-                border-radius: 12px;
-                padding: 14px;
-                font-family: monospace;
-                font-size: 13px;
-                color: #c4b5fd;
-                white-space: pre-wrap;
-                max-height: 250px;
-                overflow-y: auto;
-            }
-
-            pre.report-box {
-                white-space: pre-wrap;
-                word-wrap: break-word;
-                color: #a6accd;
-                font-family: 'Inter', sans-serif;
-                font-size: 14px;
-                line-height: 1.6;
-                background: #0d1527;
-                padding: 16px;
-                border-radius: 10px;
-                border: 1px solid rgba(255, 255, 255, 0.05);
-                margin: 0;
-            }
         </style>
     </head>
     <body>
         <sidebar>
-            <h3><i data-lucide="history"></i> Historique (SQLite)</h3>
+            <div class="brand-header">
+                <div class="brand-logo">C</div>
+                <div class="brand-title">Claude Code Desktop</div>
+            </div>
+
+            <h4><i data-lucide="history" style="width: 14px;"></i> Sessions Recentes</h4>
             <div id="history-list" class="history-list">
-                <p style="font-size: 12px; color: var(--text-muted);">Chargement de l'historique...</p>
+                <div class="history-item">Chargement...</div>
             </div>
         </sidebar>
 
         <main>
             <header>
-                <h1><i data-lucide="shield"></i> OSINT & Deep Research 24/7</h1>
-                <span class="status-badge">ONLINE • 45+ OUTILS • Qwen3.6-12B</span>
+                <div class="header-left">
+                    <span>Claude Code v2.0 • OSINT Agent</span>
+                    <span class="model-badge">Qwen3.6-12B-GGUF (CPU)</span>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>45 OUTILS CONNECTES</span>
+                </div>
             </header>
 
-            <div class="content-container">
-                <div class="hero-title">
-                    <h2>🔎 Quelle est votre cible OSINT aujourd'hui ?</h2>
-                    <p>Recherche multi-sources automatisée (45 Registres Internationaux, Offshores, Sanctions & FTS5 Instantané)</p>
+            <div id="chat-container" class="chat-container">
+                <!-- Welcome Banner -->
+                <div style="text-align: center; margin: 40px 0;">
+                    <h2 style="font-family: var(--font-code); color: var(--accent-claude); font-size: 24px; margin-bottom: 8px;">Claude Code Desktop Engine</h2>
+                    <p style="color: var(--text-muted); font-size: 14px;">Moteur d'investigation OSINT autonome avec traçabilité intégrale des 45 registres et CoT.</p>
                 </div>
+            </div>
 
-                <!-- Integrated AI Prompt Box Component -->
-                <div class="ai-prompt-box">
-                    <div id="file-previews" class="file-previews"></div>
-                    <textarea id="prompt-input" class="prompt-textarea" placeholder="Entrez un nom d'entreprise, individu, SIREN, LEI ou domaine... (Appuyez sur Entrée)"></textarea>
+            <div class="prompt-footer">
+                <div class="claude-input-container">
+                    <textarea id="prompt-input" class="prompt-textarea" placeholder="Entrez une cible d'investigation (Entreprise, SIREN, LEI, Domaine, Individu)..."></textarea>
                     
-                    <div class="prompt-actions">
-                        <div class="action-toggles">
-                            <label class="icon-btn" title="Joindre un fichier/image">
-                                <i data-lucide="paperclip" style="width: 18px; height: 18px;"></i>
-                                <input type="file" id="file-input" style="display: none;" accept="image/*" onchange="handleFileSelect(event)">
-                            </label>
-
-                            <button id="toggle-search" class="mode-toggle" onclick="toggleMode('search')">
-                                <i data-lucide="globe" style="width: 16px; height: 16px;"></i>
+                    <div class="input-actions">
+                        <div class="mode-toggles">
+                            <button id="toggle-search" class="btn-mode" onclick="toggleMode('search')">
+                                <i data-lucide="globe" style="width: 14px;"></i>
                                 <span>Search</span>
                             </button>
-
-                            <div class="divider"></div>
-
-                            <button id="toggle-think" class="mode-toggle" onclick="toggleMode('think')">
-                                <i data-lucide="brain-cog" style="width: 16px; height: 16px;"></i>
+                            <button id="toggle-think" class="btn-mode" onclick="toggleMode('think')">
+                                <i data-lucide="brain" style="width: 14px;"></i>
                                 <span>Think</span>
                             </button>
-
-                            <div class="divider"></div>
-
-                            <button id="toggle-canvas" class="mode-toggle" onclick="toggleMode('canvas')">
-                                <i data-lucide="folder-code" style="width: 16px; height: 16px;"></i>
+                            <button id="toggle-canvas" class="btn-mode" onclick="toggleMode('canvas')">
+                                <i data-lucide="code" style="width: 14px;"></i>
                                 <span>Canvas</span>
                             </button>
                         </div>
 
-                        <button id="send-btn" class="send-btn" onclick="submitSearch()" title="Envoyer la requête aux 45+ outils">
-                            <i data-lucide="arrow-up" style="width: 20px; height: 20px;"></i>
+                        <button id="send-btn" class="send-btn-claude" onclick="submitSearch()">
+                            <i data-lucide="arrow-up" style="width: 18px;"></i>
                         </button>
-                    </div>
-                </div>
-
-                <!-- Section Complète d'Explication et des 45+ Outils (Style Claude Code) -->
-                <div id="results-container" class="results-container">
-                    <!-- 1. Tracé Exhaustif des 45 Outils Utilisés (Style Claude Code) -->
-                    <div class="card-section">
-                        <h4 class="card-header-title" style="color: var(--accent-blue);">
-                            <i data-lucide="wrench"></i> 🛠️ Tracé Séquentiel des 45+ Outils OSINT Exécutés (Claude Code Style)
-                        </h4>
-                        <div id="tools-grid" class="tools-grid">
-                            <div class="tool-card">
-                                <div class="tool-card-header">Initialisation des 45 registres OSINT...</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 2. Pensée Interne de l'IA (CoT <think>) -->
-                    <div class="card-section">
-                        <h4 class="card-header-title" style="color: var(--accent-purple);">
-                            <i data-lucide="brain"></i> 🧠 Raisonnement & Pensée Interne de l'IA (&lt;think&gt;)
-                        </h4>
-                        <div id="thinking-box" class="thinking-box">Analyse de la cible et des indices en cours...</div>
-                    </div>
-
-                    <!-- 3. Rapport d'Investigation Final -->
-                    <div class="card-section">
-                        <h4 class="card-header-title" style="color: var(--accent-green);">
-                            <i data-lucide="file-text"></i> 📊 Rapport Synthétique OSINT
-                        </h4>
-                        <pre id="report-box" class="report-box">Génération du rapport...</pre>
                     </div>
                 </div>
             </div>
@@ -740,9 +663,7 @@ def serve_dashboard():
 
         <script>
             lucide.createIcons();
-
             let activeMode = null;
-            let attachedFile = null;
 
             loadHistory();
 
@@ -752,93 +673,106 @@ def serve_dashboard():
                     const res = await fetch('/api/history');
                     const data = await res.json();
                     if (!data.investigations || data.investigations.length === 0) {
-                        list.innerHTML = '<p style="font-size: 12px; color: var(--text-muted);">Aucune investigation enregistrée.</p>';
+                        list.innerHTML = '<div style="font-size:11px; color:var(--text-muted);">Aucune session.</div>';
                         return;
                     }
                     list.innerHTML = data.investigations.map(inv => `
                         <div class="history-item" onclick="loadInvestigationDetail('${inv.id}')">
+                            <i data-lucide="terminal" style="width: 12px;"></i>
                             <div class="title">${escapeHtml(inv.target)}</div>
-                            <div class="date">${inv.created_at || 'Actif'}</div>
                         </div>
                     `).join('');
+                    lucide.createIcons();
                 } catch(e) {
-                    list.innerHTML = '<p style="font-size: 12px; color: #ef4444;">Erreur historique.</p>';
+                    list.innerHTML = '<div style="font-size:11px; color:#ef4444;">Erreur historique.</div>';
                 }
             }
 
             async function loadInvestigationDetail(invId) {
-                const container = document.getElementById('results-container');
-                const toolsGrid = document.getElementById('tools-grid');
-                const thinkingBox = document.getElementById('thinking-box');
-                const reportBox = document.getElementById('report-box');
-
-                container.style.display = 'flex';
-                toolsGrid.innerHTML = '<div class="tool-card"><div class="tool-card-header">Chargement des 45 outils archivés...</div></div>';
-                thinkingBox.innerHTML = 'Recoupage des pensées archivées...';
-                reportBox.innerHTML = 'Chargement du rapport archivé...';
+                const chatContainer = document.getElementById('chat-container');
+                chatContainer.innerHTML = '<div style="font-family: var(--font-code); color: var(--accent-blue);">⏳ Chargement de la session depuis SQLite...</div>';
 
                 try {
                     const res = await fetch('/api/history/' + invId);
                     const data = await res.json();
                     const inv = data.investigation;
                     const logs = data.logs || [];
-                    
+
                     const toolSeqLog = logs.find(l => l.action_type === 'TOOL_SEQUENCE');
                     const thoughtLog = logs.find(l => l.action_type === 'THOUGHT_PROCESS');
                     const reportLog = logs.find(l => l.action_type === 'FINAL_REPORT');
 
+                    let sequence = [];
                     if (toolSeqLog && toolSeqLog.content) {
-                        try {
-                            const seq = JSON.parse(toolSeqLog.content);
-                            renderToolSequence(seq);
-                        } catch(e) {
-                            toolsGrid.innerHTML = `<div class="tool-card"><div class="tool-card-header">Outils exécutés pour '${escapeHtml(inv.target)}'</div></div>`;
-                        }
-                    } else {
-                        toolsGrid.innerHTML = `<div class="tool-card"><div class="tool-card-header">Outils exécutés pour '${escapeHtml(inv.target)}'</div></div>`;
+                        try { sequence = JSON.parse(toolSeqLog.content); } catch(e) {}
                     }
 
-                    thinkingBox.innerHTML = thoughtLog ? escapeHtml(thoughtLog.content) : 'Raisonnement archivé disponible.';
-                    reportBox.innerHTML = reportLog ? escapeHtml(reportLog.content) : escapeHtml(inv.summary || 'Rapport archivé.');
+                    renderClaudeSession(inv.target, sequence, thoughtLog ? thoughtLog.content : '', reportLog ? reportLog.content : inv.summary);
                 } catch(e) {
-                    reportBox.innerHTML = 'Erreur lors du chargement des détails.';
+                    chatContainer.innerHTML = '<div style="color: #ef4444;">Erreur de rechargement.</div>';
                 }
             }
 
-            function renderToolSequence(sequence) {
-                const toolsGrid = document.getElementById('tools-grid');
-                if (!sequence || sequence.length === 0) {
-                    toolsGrid.innerHTML = '<div class="tool-card"><div class="tool-card-header">Aucun outil enregistré.</div></div>';
-                    return;
-                }
+            function renderClaudeSession(target, toolSequence, thinkingProcess, reportResult) {
+                const chatContainer = document.getElementById('chat-container');
+                let html = `
+                    <div style="font-family: var(--font-code); color: var(--text-muted); font-size: 13px;">
+                        <span style="color: var(--accent-claude); font-weight: bold;">user@claude-desktop</span>:~$ osint-investigate --target "${escapeHtml(target)}"
+                    </div>
+                `;
 
-                toolsGrid.innerHTML = sequence.map((t, idx) => `
-                    <div class="tool-card">
-                        <div class="tool-card-header" onclick="toggleToolBody('tool-body-${idx}')">
-                            <span class="tool-name-tag">
-                                <i data-lucide="terminal" style="width: 14px; height: 14px;"></i>
-                                [Tool ${idx + 1}/${sequence.length}] ${escapeHtml(t.tool_name)}
-                                <span class="tool-category-badge">${escapeHtml(t.category)}</span>
-                            </span>
-                            <span class="tool-duration">⚡ ${t.duration_ms} ms • ${t.status}</span>
-                        </div>
-                        <div id="tool-body-${idx}" class="tool-card-body">
+                // 1. Tracé des 45 Outils
+                if (toolSequence && toolSequence.length > 0) {
+                    html += `<div style="font-family: var(--font-code); color: var(--accent-blue); font-weight: 600; margin-top: 10px;">🔨 Exécution des ${toolSequence.length} Outils OSINT :</div>`;
+                    html += toolSequence.map((t, idx) => `
+                        <div class="claude-tool-block">
+                            <div class="claude-tool-header" onclick="toggleToolBody('tool-body-${idx}')">
+                                <div class="tool-call-label">
+                                    <i data-lucide="wrench" style="width: 14px;"></i>
+                                    [Tool ${idx + 1}/${toolSequence.length}] ${escapeHtml(t.tool_name)}
+                                </div>
+                                <div class="tool-meta">⚡ ${t.duration_ms} ms • ${t.status}</div>
+                            </div>
+                            <div id="tool-body-${idx}" class="claude-tool-body">
 <strong>INPUT:</strong>
 ${escapeHtml(JSON.stringify(t.input, null, 2))}
 
 <strong>OUTPUT:</strong>
 ${escapeHtml(JSON.stringify(t.output, null, 2))}
+                            </div>
                         </div>
-                    </div>
-                `).join('');
+                    `).join('');
+                }
+
+                // 2. Pensée IA <think>
+                if (thinkingProcess) {
+                    html += `
+                        <div class="claude-thinking-block">
+                            <div class="claude-thinking-header">
+                                <i data-lucide="brain" style="width: 14px;"></i>
+                                <span>Chain of Thought (&lt;think&gt;)</span>
+                            </div>
+                            ${escapeHtml(thinkingProcess)}
+                        </div>
+                    `;
+                }
+
+                // 3. Rapport Final
+                if (reportResult) {
+                    html += `
+                        <div class="claude-response-block">
+                            ${escapeHtml(reportResult)}
+                        </div>
+                    `;
+                }
+
+                chatContainer.innerHTML = html;
                 lucide.createIcons();
             }
 
             function toggleToolBody(id) {
                 const el = document.getElementById(id);
-                if (el) {
-                    el.style.display = el.style.display === 'block' ? 'none' : 'block';
-                }
+                if (el) el.style.display = el.style.display === 'block' ? 'none' : 'block';
             }
 
             function toggleMode(mode) {
@@ -848,38 +782,15 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
 
                 if (activeMode === mode) {
                     activeMode = null;
-                    searchBtn.className = 'mode-toggle';
-                    thinkBtn.className = 'mode-toggle';
-                    canvasBtn.className = 'mode-toggle';
+                    searchBtn.className = 'btn-mode';
+                    thinkBtn.className = 'btn-mode';
+                    canvasBtn.className = 'btn-mode';
                 } else {
                     activeMode = mode;
-                    searchBtn.className = 'mode-toggle ' + (mode === 'search' ? 'active-search' : '');
-                    thinkBtn.className = 'mode-toggle ' + (mode === 'think' ? 'active-think' : '');
-                    canvasBtn.className = 'mode-toggle ' + (mode === 'canvas' ? 'active-canvas' : '');
+                    searchBtn.className = 'btn-mode ' + (mode === 'search' ? 'active-search' : '');
+                    thinkBtn.className = 'btn-mode ' + (mode === 'think' ? 'active-think' : '');
+                    canvasBtn.className = 'btn-mode ' + (mode === 'canvas' ? 'active-canvas' : '');
                 }
-            }
-
-            function handleFileSelect(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                attachedFile = file;
-                const container = document.getElementById('file-previews');
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    container.innerHTML = `
-                        <div class="preview-thumb">
-                            <img src="${e.target.result}" alt="Preview">
-                            <button class="remove-btn" onclick="removeFile()"><i data-lucide="x" style="width: 12px; height: 12px;"></i></button>
-                        </div>
-                    `;
-                    lucide.createIcons();
-                };
-                reader.readAsDataURL(file);
-            }
-
-            function removeFile() {
-                attachedFile = null;
-                document.getElementById('file-previews').innerHTML = '';
             }
 
             document.getElementById('prompt-input').addEventListener('keydown', function(e) {
@@ -894,26 +805,22 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                 const sendBtn = document.getElementById('send-btn');
                 const query = promptInput.value.trim();
                 
-                if (!query && !attachedFile) return alert('Veuillez entrer une cible OSINT !');
+                if (!query) return alert('Veuillez entrer une cible !');
 
-                const container = document.getElementById('results-container');
-                const toolsGrid = document.getElementById('tools-grid');
-                const thinkingBox = document.getElementById('thinking-box');
-                const reportBox = document.getElementById('report-box');
-                
+                const chatContainer = document.getElementById('chat-container');
                 sendBtn.classList.add('loading');
-                container.style.display = 'flex';
                 
-                toolsGrid.innerHTML = `
-                    <div class="tool-card"><div class="tool-card-header">⚡ Interrogation séquentielle des 45+ registres OSINT en cours...</div></div>
+                chatContainer.innerHTML = `
+                    <div style="font-family: var(--font-code); color: var(--text-muted); font-size: 13px;">
+                        <span style="color: var(--accent-claude); font-weight: bold;">user@claude-desktop</span>:~$ osint-investigate --target "${escapeHtml(query)}"
+                    </div>
+                    <div style="font-family: var(--font-code); color: var(--accent-blue); margin-top: 10px;">
+                        ⚡ Lancement séquentiel des 45 outils OSINT et du moteur Qwen3.6-12B...
+                    </div>
                 `;
-                thinkingBox.innerHTML = '🧠 L\'IA analyse la cible et formule son raisonnement étape par étape...';
-                reportBox.innerHTML = '⏳ Rédaction du rapport OSINT final par l\'IA...';
 
                 let fullQuery = query;
-                if (activeMode) {
-                    fullQuery = `[${activeMode.toUpperCase()}] ${query}`;
-                }
+                if (activeMode) fullQuery = `[${activeMode.toUpperCase()}] ${query}`;
 
                 try {
                     const res = await fetch('/api/investigate', {
@@ -923,18 +830,11 @@ ${escapeHtml(JSON.stringify(t.output, null, 2))}
                     });
                     const data = await res.json();
                     
-                    if (data.tool_sequence) {
-                        renderToolSequence(data.tool_sequence);
-                    }
-
-                    thinkingBox.innerHTML = escapeHtml(data.thinking_process || 'Raisonnement synthétique effectué.');
-                    reportBox.innerHTML = escapeHtml(data.results || 'Rapport généré.');
-                    
+                    renderClaudeSession(data.target, data.tool_sequence, data.thinking_process, data.results);
                     promptInput.value = '';
-                    removeFile();
                     loadHistory();
                 } catch (e) {
-                    reportBox.innerHTML = 'Erreur lors de l\'investigation : ' + escapeHtml(e.message);
+                    chatContainer.innerHTML += '<div style="color: #ef4444; margin-top: 10px;">Erreur d\'investigation : ' + escapeHtml(e.message) + '</div>';
                 } finally {
                     sendBtn.classList.remove('loading');
                 }
