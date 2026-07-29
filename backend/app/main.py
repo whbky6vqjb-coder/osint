@@ -3,6 +3,7 @@ import sys
 import uuid
 import time
 import re
+import json
 import asyncio
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -63,7 +64,7 @@ def get_history():
 
 @app.get("/api/history/{inv_id}")
 def get_history_detail(inv_id: str):
-    """Récupère le détail et les logs d'une investigation passée"""
+    """Récupère le détail complet, la séquence des outils et les logs d'une investigation passée"""
     try:
         inv = fts_manager.get_investigation(inv_id)
         logs = fts_manager.get_logs(inv_id)
@@ -78,35 +79,126 @@ async def run_investigation(req: QueryRequest):
     
     inv_id = str(uuid.uuid4())[:8]
     target_clean = req.query.strip()
-    execution_steps = []
+    tool_sequence = []
     
-    # 1. Initialisation de l'investigation
+    # 1. Création de l'investigation dans SQLite
     try:
         fts_manager.create_investigation(inv_id, title=target_clean, target=target_clean)
     except Exception as e:
         print(f"Note SQLite create_investigation: {e}")
 
-    step_1_msg = f"🔍 [Étape 1] Analyse de la cible '{target_clean}' et détection automatique de la juridiction..."
-    execution_steps.append({"step": 1, "action": "JURISDICTION_DETECTION", "details": step_1_msg})
-    
-    # 2. Détection de Juridiction
+    # Tool 1: JurisdictionResolver
+    t1_start = time.time()
     jurisdiction_info = JurisdictionResolver.detect_jurisdiction(target_clean)
-    
-    step_2_msg = f"🌐 [Étape 2] Interrogation des registres officiels (ICIJ Offshore Leaks, OpenSanctions, OpenCorporates)..."
-    execution_steps.append({"step": 2, "action": "REGISTRIES_QUERY", "details": step_2_msg})
-    
-    # 3. Interrogation parallèle des sources OSINT
+    t1_dur = round((time.time() - t1_start) * 1000, 2)
+    tool1_call = {
+        "id": "call_jur_01",
+        "tool_name": "JurisdictionResolver.detect_jurisdiction",
+        "category": "Tax Haven & Jurisdiction Evaluator",
+        "input": {"query": target_clean},
+        "output": jurisdiction_info,
+        "duration_ms": t1_dur,
+        "status": "SUCCESS"
+    }
+    tool_sequence.append(tool1_call)
+
+    # Tool 2: ICIJ Offshore Leaks
+    t2_start = time.time()
     try:
-        icij_task = OSINTRegistriesTool.query_icij_offshore_leaks(target_clean)
-        sanctions_task = OSINTRegistriesTool.query_opensanctions(target_clean)
-        icij_results, sanctions_results = await asyncio.gather(icij_task, sanctions_task)
+        icij_results = await OSINTRegistriesTool.query_icij_offshore_leaks(target_clean)
+        t2_status = "SUCCESS"
     except Exception as e:
-        icij_results = [{"note": "Base Offshore Leaks consultée"}]
-        sanctions_results = [{"note": "Base OpenSanctions consultée"}]
+        icij_results = [{"error": str(e)}]
+        t2_status = "ERROR"
+    t2_dur = round((time.time() - t2_start) * 1000, 2)
+    tool_sequence.append({
+        "id": "call_icij_02",
+        "tool_name": "OSINTRegistriesTool.query_icij_offshore_leaks",
+        "category": "Offshore Leaks (Panama, Pandora, Paradise Papers)",
+        "input": {"entity": target_clean},
+        "output": icij_results[:2],
+        "duration_ms": t2_dur,
+        "status": t2_status
+    })
 
-    step_3_msg = f"🧠 [Étape 3] Transmission des données récoltées au moteur Qwen3.6-12B-IQ-Ultra-Heretic pour raisonnement synthétique..."
-    execution_steps.append({"step": 3, "action": "LLM_REASONING", "details": step_3_msg})
+    # Tool 3: OpenSanctions Compliance Check
+    t3_start = time.time()
+    try:
+        sanctions_results = await OSINTRegistriesTool.query_opensanctions(target_clean)
+        t3_status = "SUCCESS"
+    except Exception as e:
+        sanctions_results = [{"error": str(e)}]
+        t3_status = "ERROR"
+    t3_dur = round((time.time() - t3_start) * 1000, 2)
+    tool_sequence.append({
+        "id": "call_sanctions_03",
+        "tool_name": "OSINTRegistriesTool.query_opensanctions",
+        "category": "Global Sanctions & PEP Compliance (OFAC/EU/UN)",
+        "input": {"entity": target_clean},
+        "output": sanctions_results[:2],
+        "duration_ms": t3_dur,
+        "status": t3_status
+    })
 
+    # Tool 4: OpenCorporates World Directory
+    t4_start = time.time()
+    try:
+        oc_results = await OSINTRegistriesTool.query_opencorporates(target_clean)
+        t4_status = "SUCCESS"
+    except Exception as e:
+        oc_results = [{"error": str(e)}]
+        t4_status = "ERROR"
+    t4_dur = round((time.time() - t4_start) * 1000, 2)
+    tool_sequence.append({
+        "id": "call_oc_04",
+        "tool_name": "OSINTRegistriesTool.query_opencorporates",
+        "category": "Global Corporate Registry (>200M Companies)",
+        "input": {"company_name": target_clean},
+        "output": oc_results[:2],
+        "duration_ms": t4_dur,
+        "status": t4_status
+    })
+
+    # Tool 5: GLEIF LEI Hierarchy Check
+    t5_start = time.time()
+    try:
+        gleif_results = await OSINTRegistriesTool.query_gleif_lei(target_clean)
+        t5_status = "SUCCESS"
+    except Exception as e:
+        gleif_results = {"error": str(e)}
+        t5_status = "ERROR"
+    t5_dur = round((time.time() - t5_start) * 1000, 2)
+    tool_sequence.append({
+        "id": "call_gleif_05",
+        "tool_name": "OSINTRegistriesTool.query_gleif_lei",
+        "category": "Parent/Subsidiary LEI Structure (GLEIF)",
+        "input": {"legal_name": target_clean},
+        "output": gleif_results,
+        "duration_ms": t5_dur,
+        "status": t5_status
+    })
+
+    # Tool 6: INSEE Sirene (Entreprises Françaises)
+    t6_start = time.time()
+    try:
+        sirene_results = await OSINTRegistriesTool.query_insee_sirene(target_clean)
+        t6_status = "SUCCESS"
+    except Exception as e:
+        sirene_results = {"error": str(e)}
+        t6_status = "ERROR"
+    t6_dur = round((time.time() - t6_start) * 1000, 2)
+    tool_sequence.append({
+        "id": "call_sirene_06",
+        "tool_name": "OSINTRegistriesTool.query_insee_sirene",
+        "category": "French Companies Registry (INSEE Sirene)",
+        "input": {"query": target_clean},
+        "output": sirene_results,
+        "duration_ms": t6_dur,
+        "status": t6_status
+    })
+
+    # Tool 7: Qwen3.6-12B Reasoning & Synthesis Engine
+    t7_start = time.time()
     system_prompt = """Tu es un expert en investigation OSINT, intelligence financière et détection de paradis fiscaux.
 Génère une réponse structurée contenant :
 1. Une section de raisonnement interne dans des balises <think>...</think> où tu expliques étape par étape ta réflexion, les hypothèses et l'évaluation des risques.
@@ -114,15 +206,23 @@ Génère une réponse structurée contenant :
 
     user_prompt = f"""Cible d'investigation : '{target_clean}'
 Juridiction détectée : {jurisdiction_info}
-Extraits Offshore Leaks (ICIJ) : {icij_results[:2]}
-Conformité & Sanctions (OpenSanctions) : {sanctions_results[:2]}
+Séquence d'outils OSINT exécutés :
+- ICIJ Offshore Leaks : {icij_results[:2]}
+- OpenSanctions PEP/Sanctions : {sanctions_results[:2]}
+- OpenCorporates : {oc_results[:2]}
+- GLEIF LEI Hiérarchie : {gleif_results}
+- INSEE Sirene : {sirene_results}
 
 Génère ton raisonnement complet <think> puis le rapport d'investigation final."""
 
     try:
         raw_llm_response = await LLMClient.generate(prompt=user_prompt, system_prompt=system_prompt)
+        t7_status = "SUCCESS"
     except Exception as e:
         raw_llm_response = f"<think>\nL'IA analyse la cible '{target_clean}' à partir des indices de juridiction {jurisdiction_info}.\nRecherche de liens avec des sociétés écrans et vérification de la conformité.\n</think>\n\n### 📊 Rapport d'Investigation OSINT\n- Cible : {target_clean}\n- Juridiction : {jurisdiction_info.get('tax_haven_label')}\n- Évaluation : Risque analysé avec succès."
+        t7_status = "ERROR"
+
+    t7_dur = round((time.time() - t7_start) * 1000, 2)
 
     # Extraction du bloc de pensée <think>...</think>
     thinking_content = ""
@@ -135,10 +235,21 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
     else:
         thinking_content = f"L'IA Qwen3.6-12B a évalué la structure de la cible '{target_clean}', croisé la juridiction ({jurisdiction_info.get('tax_haven_label')}) et synthétisé les risques fiscaux et réglementaires."
 
-    # Enregistrement des logs SQLite
+    tool_sequence.append({
+        "id": "call_llm_07",
+        "tool_name": "Qwen3.6-12B-IQ-Ultra-Heretic-GGUF",
+        "category": "Reasoning & Report Generation Engine",
+        "input": {"prompt": user_prompt[:200] + "..."},
+        "output": {"thinking_length": len(thinking_content), "report_length": len(report_content)},
+        "duration_ms": t7_dur,
+        "status": t7_status
+    })
+
+    # Enregistrement exhaustif des logs et séquence d'outils dans SQLite
     try:
-        fts_manager.add_log(inv_id, step=1, agent="Qwen3.6-12B", action_type="THOUGHT_PROCESS", content=thinking_content)
-        fts_manager.add_log(inv_id, step=2, agent="Qwen3.6-12B", action_type="FINAL_REPORT", content=report_content)
+        fts_manager.add_log(inv_id, step=1, agent="ToolRegistry", action_type="TOOL_SEQUENCE", content=json.dumps(tool_sequence))
+        fts_manager.add_log(inv_id, step=2, agent="Qwen3.6-12B", action_type="THOUGHT_PROCESS", content=thinking_content)
+        fts_manager.add_log(inv_id, step=3, agent="Qwen3.6-12B", action_type="FINAL_REPORT", content=report_content)
         fts_manager.index_document(doc_id=f"doc_{inv_id}", inv_id=inv_id, title=f"Rapport OSINT: {target_clean}", source="Qwen3.6-12B Engine", content=report_content)
     except Exception as e:
         print(f"Note SQLite add_log: {e}")
@@ -147,10 +258,9 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
         "id": inv_id,
         "target": target_clean,
         "jurisdiction": jurisdiction_info,
-        "execution_steps": execution_steps,
+        "tool_sequence": tool_sequence,
         "thinking_process": thinking_content,
         "results": report_content,
-        "offshore_data": icij_results[:2],
         "status": "COMPLETED",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -175,6 +285,7 @@ def serve_dashboard():
                 --accent-blue: #1EAEDB;
                 --accent-purple: #8B5CF6;
                 --accent-orange: #F97316;
+                --accent-green: #10B981;
                 --text-main: #f0f4f8;
                 --text-muted: #9CA3AF;
             }
@@ -270,7 +381,7 @@ def serve_dashboard():
                 gap: 10px;
             }
             .content-container {
-                max-width: 900px;
+                max-width: 950px;
                 width: 92%;
                 margin: 30px auto;
                 display: flex;
@@ -460,24 +571,62 @@ def serve_dashboard():
                 font-size: 16px;
                 font-weight: 600;
                 margin-top: 0;
-                margin-bottom: 12px;
+                margin-bottom: 14px;
                 display: flex;
                 align-items: center;
                 gap: 8px;
             }
 
-            .steps-timeline {
+            /* Tool Execution Cards (Claude Code Style) */
+            .tools-grid {
                 display: flex;
                 flex-direction: column;
                 gap: 10px;
             }
-            .step-item {
+            .tool-card {
                 background: #0d1527;
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 12px;
+                overflow: hidden;
+            }
+            .tool-card-header {
                 padding: 10px 14px;
-                border-radius: 8px;
-                border-left: 3px solid var(--accent-blue);
+                background: rgba(255, 255, 255, 0.02);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
                 font-size: 13px;
-                color: #d1d5db;
+                cursor: pointer;
+                user-select: none;
+            }
+            .tool-name-tag {
+                font-family: monospace;
+                font-weight: 600;
+                color: var(--accent-blue);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .tool-category-badge {
+                font-size: 11px;
+                background: rgba(139, 92, 246, 0.15);
+                color: #c4b5fd;
+                padding: 2px 8px;
+                border-radius: 12px;
+            }
+            .tool-duration {
+                font-size: 11px;
+                color: var(--text-muted);
+                font-family: monospace;
+            }
+            .tool-card-body {
+                padding: 12px 14px;
+                border-top: 1px solid rgba(255, 255, 255, 0.04);
+                font-family: monospace;
+                font-size: 12px;
+                background: #090e1a;
+                color: #94a3b8;
+                white-space: pre-wrap;
             }
 
             .thinking-box {
@@ -489,7 +638,7 @@ def serve_dashboard():
                 font-size: 13px;
                 color: #c4b5fd;
                 white-space: pre-wrap;
-                max-height: 220px;
+                max-height: 250px;
                 overflow-y: auto;
             }
 
@@ -566,15 +715,17 @@ def serve_dashboard():
                     </div>
                 </div>
 
-                <!-- Section Complète d'Explication et de Pensée IA -->
+                <!-- Section Complète d'Explication et de Séquence des Outils (Style Claude Code) -->
                 <div id="results-container" class="results-container">
-                    <!-- 1. Journal des Étapes d'Exécution -->
+                    <!-- 1. Tracé Exhaustif des Outils Utilisés (Style Claude Code) -->
                     <div class="card-section">
                         <h4 class="card-header-title" style="color: var(--accent-blue);">
-                            <i data-lucide="list-checks"></i> ⚡ Journal des Actions d'Investigation
+                            <i data-lucide="wrench"></i> 🛠️ Séquence Chronologique des Outils Exécutés (Claude Code Style)
                         </h4>
-                        <div id="steps-timeline" class="steps-timeline">
-                            <div class="step-item">Initialisation de la recherche...</div>
+                        <div id="tools-grid" class="tools-grid">
+                            <div class="tool-card">
+                                <div class="tool-card-header">Initialisation des outils OSINT...</div>
+                            </div>
                         </div>
                     </div>
 
@@ -588,7 +739,7 @@ def serve_dashboard():
 
                     <!-- 3. Rapport d'Investigation Final -->
                     <div class="card-section">
-                        <h4 class="card-header-title" style="color: #10b981;">
+                        <h4 class="card-header-title" style="color: var(--accent-green);">
                             <i data-lucide="file-text"></i> 📊 Rapport Synthétique OSINT
                         </h4>
                         <pre id="report-box" class="report-box">Génération du rapport...</pre>
@@ -628,12 +779,12 @@ def serve_dashboard():
 
             async function loadInvestigationDetail(invId) {
                 const container = document.getElementById('results-container');
-                const stepsTimeline = document.getElementById('steps-timeline');
+                const toolsGrid = document.getElementById('tools-grid');
                 const thinkingBox = document.getElementById('thinking-box');
                 const reportBox = document.getElementById('report-box');
 
                 container.style.display = 'flex';
-                stepsTimeline.innerHTML = '<div class="step-item">Chargement des archives SQLite...</div>';
+                toolsGrid.innerHTML = '<div class="tool-card"><div class="tool-card-header">Chargement des outils archivés...</div></div>';
                 thinkingBox.innerHTML = 'Recoupage des pensées archivées...';
                 reportBox.innerHTML = 'Chargement du rapport archivé...';
 
@@ -643,15 +794,61 @@ def serve_dashboard():
                     const inv = data.investigation;
                     const logs = data.logs || [];
                     
-                    stepsTimeline.innerHTML = `<div class="step-item">📌 Investigation sur '${escapeHtml(inv.target)}' rechargée depuis SQLite.</div>`;
-                    
+                    const toolSeqLog = logs.find(l => l.action_type === 'TOOL_SEQUENCE');
                     const thoughtLog = logs.find(l => l.action_type === 'THOUGHT_PROCESS');
                     const reportLog = logs.find(l => l.action_type === 'FINAL_REPORT');
+
+                    if (toolSeqLog && toolSeqLog.content) {
+                        try {
+                            const seq = JSON.parse(toolSeqLog.content);
+                            renderToolSequence(seq);
+                        } catch(e) {
+                            toolsGrid.innerHTML = `<div class="tool-card"><div class="tool-card-header">Outils exécutés pour '${escapeHtml(inv.target)}'</div></div>`;
+                        }
+                    } else {
+                        toolsGrid.innerHTML = `<div class="tool-card"><div class="tool-card-header">Outils exécutés pour '${escapeHtml(inv.target)}'</div></div>`;
+                    }
 
                     thinkingBox.innerHTML = thoughtLog ? escapeHtml(thoughtLog.content) : 'Raisonnement archivé disponible.';
                     reportBox.innerHTML = reportLog ? escapeHtml(reportLog.content) : escapeHtml(inv.summary || 'Rapport archivé.');
                 } catch(e) {
                     reportBox.innerHTML = 'Erreur lors du chargement des détails.';
+                }
+            }
+
+            function renderToolSequence(sequence) {
+                const toolsGrid = document.getElementById('tools-grid');
+                if (!sequence || sequence.length === 0) {
+                    toolsGrid.innerHTML = '<div class="tool-card"><div class="tool-card-header">Aucun outil enregistré.</div></div>';
+                    return;
+                }
+
+                toolsGrid.innerHTML = sequence.map((t, idx) => `
+                    <div class="tool-card">
+                        <div class="tool-card-header" onclick="toggleToolBody('tool-body-${idx}')">
+                            <span class="tool-name-tag">
+                                <i data-lucide="terminal" style="width: 14px; height: 14px;"></i>
+                                [Tool ${idx + 1}] ${escapeHtml(t.tool_name)}
+                                <span class="tool-category-badge">${escapeHtml(t.category)}</span>
+                            </span>
+                            <span class="tool-duration">⚡ ${t.duration_ms} ms • ${t.status}</span>
+                        </div>
+                        <div id="tool-body-${idx}" class="tool-card-body">
+<strong>INPUT:</strong>
+${escapeHtml(JSON.stringify(t.input, null, 2))}
+
+<strong>OUTPUT:</strong>
+${escapeHtml(JSON.stringify(t.output, null, 2))}
+                        </div>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            }
+
+            function toggleToolBody(id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = el.style.display === 'none' ? 'block' : 'none';
                 }
             }
 
@@ -711,7 +908,7 @@ def serve_dashboard():
                 if (!query && !attachedFile) return alert('Veuillez entrer une cible OSINT !');
 
                 const container = document.getElementById('results-container');
-                const stepsTimeline = document.getElementById('steps-timeline');
+                const toolsGrid = document.getElementById('tools-grid');
                 const thinkingBox = document.getElementById('thinking-box');
                 const reportBox = document.getElementById('report-box');
                 
@@ -719,10 +916,8 @@ def serve_dashboard():
                 sendBtn.classList.add('loading');
                 container.style.display = 'flex';
                 
-                stepsTimeline.innerHTML = `
-                    <div class="step-item">1. Détection de juridiction et identification de la cible '${escapeHtml(query)}'...</div>
-                    <div class="step-item">2. Interrogation d'ICIJ Offshore Leaks & OpenSanctions...</div>
-                    <div class="step-item">3. Envoi du contexte au moteur Qwen3.6-12B GGUF...</div>
+                toolsGrid.innerHTML = `
+                    <div class="tool-card"><div class="tool-card-header">⚡ Exécution séquentielle des 7 outils OSINT en cours...</div></div>
                 `;
                 thinkingBox.innerHTML = '🧠 L\'IA analyse la cible et formule son raisonnement étape par étape...';
                 reportBox.innerHTML = '⏳ Rédaction du rapport OSINT final par l\'IA...';
@@ -740,11 +935,9 @@ def serve_dashboard():
                     });
                     const data = await res.json();
                     
-                    // Remplissage des étapes d'exécution
-                    if (data.execution_steps && data.execution_steps.length > 0) {
-                        stepsTimeline.innerHTML = data.execution_steps.map(s => `
-                            <div class="step-item">⚡ [Étape ${s.step}] ${escapeHtml(s.details)}</div>
-                        `).join('');
+                    // Remplissage de la séquence d'outils (Style Claude Code)
+                    if (data.tool_sequence) {
+                        renderToolSequence(data.tool_sequence);
                     }
 
                     // Remplissage de la pensée interne (<think>)
