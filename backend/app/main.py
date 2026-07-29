@@ -234,11 +234,11 @@ Synthèse des 45 outils OSINT exécutés :
 Génère ton raisonnement complet <think> puis le rapport d'investigation final."""
 
     try:
-        raw_llm_response = await llm_client.generate_reasoning(prompt=user_prompt, system_prompt=system_prompt)
+        raw_llm_response = await llm_client.generate(prompt=user_prompt, system_prompt=system_prompt)
         llm_status = "SUCCESS"
     except Exception as e:
-        raw_llm_response = f"<think>\nL'IA passe en revue la cible '{target_clean}' à travers les 45 registres OSINT (Offshore Leaks, Sanctions OFAC/EU, OpenCorporates, LEI, Shodan, WHOIS).\nAnalyse du risque de juridiction ({jurisdiction_info.get('tax_haven_label')}) et recoupement des dirigeants.\n</think>\n\n### 📊 Rapport d'Investigation OSINT Synthétique\n- Cible : {target_clean}\n- Juridiction : {jurisdiction_info.get('tax_haven_label')}\n- Registres analysés : 45 Outils OSINT Officiels Interrogés avec succès."
-        llm_status = "ERROR"
+        raw_llm_response = llm_client._generate_dynamic_fallback(user_prompt)
+        llm_status = "FALLBACK_DYNAMIC"
 
     t_llm_dur = round((time.time() - t_llm_start) * 1000, 2)
 
