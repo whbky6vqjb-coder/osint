@@ -21,6 +21,9 @@ from app.config import settings
 from app.db.sqlite_fts import SQLiteFTSManager
 from app.core.llm_client import NemotronLLMClient
 from app.tools.osint_registries import JurisdictionResolver, OSINTRegistriesTool
+from app.engine.nat_disambiguation import NATDisambiguationEngine
+from app.engine.vpn_leak_detector import VPNAndLeakDetectorEngine
+from app.cloud_sync.autonomous_daemon import AutonomousOSINTDaemon
 
 app = FastAPI(
     title="Autonomous OSINT & Deep Research 24/7 Platform",
@@ -149,7 +152,7 @@ async def run_investigation(req: QueryRequest):
     except Exception as e:
         print(f"Note SQLite create_investigation: {e}")
 
-    # Exécution des registres clés & ADINT & Leaks & Géolocalisation
+    # Exécution des registres clés & ADINT & Leaks & Géolocalisation & Moteurs NAT / VPN
     jurisdiction_info = JurisdictionResolver.detect_jurisdiction(target_clean)
     icij_results = await OSINTRegistriesTool.query_icij_offshore_leaks(target_clean)
     sanctions_results = await OSINTRegistriesTool.query_opensanctions(target_clean)
@@ -159,11 +162,13 @@ async def run_investigation(req: QueryRequest):
     breach_results = await OSINTRegistriesTool.query_breach_databases(target_clean)
     adint_results = await OSINTRegistriesTool.query_analytics_ad_crosslink(target_clean)
     gps_results = await OSINTRegistriesTool.query_opencellid_wigle_gps(target_clean)
+    nat_risk_analysis = NATDisambiguationEngine.evaluate_network_identity_risk(target_clean)
+    vpn_leak_analysis = VPNAndLeakDetectorEngine.analyze_vpn_and_protocol_leaks(target_clean)
 
     research_intent = {
         "target": target_clean,
         "objective": f"Investigation approfondie et cartographie d'empreinte numérique pour '{target_clean}'",
-        "hypothesis": f"Vérification des structures légales (Juridiction {jurisdiction_info.get('jurisdiction_code')}), détection de fuites d'identifiants et corrélation publicitaire ADINT.",
+        "hypothesis": f"Vérification des structures légales (Juridiction {jurisdiction_info.get('jurisdiction_code')}), détection de fuites d'identifiants, corrélation publicitaire ADINT, analyse anti-faux positifs NAT/CGNAT et détection VPN/Fuites DNS.",
         "ai_tool_control_mode": "DYNAMIC_SELECTION_ALL_60_MODULES"
     }
 
@@ -189,6 +194,8 @@ async def run_investigation(req: QueryRequest):
             output_data = adint_results
         elif "opencellid_wigle_gps" in t_name:
             output_data = gps_results
+        elif "threat_correlator" in t_name or "passive_dns" in t_name:
+            output_data = {"nat_risk_analysis": nat_risk_analysis, "vpn_leak_analysis": vpn_leak_analysis}
         else:
             output_data = {
                 "target": target_clean,
