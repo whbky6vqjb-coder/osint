@@ -1,0 +1,13 @@
+{
+  "id": "YOUR_KAGGLE_USERNAME/osint-agent-247-runner",
+  "title": "osint-agent-247-runner",
+  "code_file": "kaggle_osint_runner.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "kernel_sources": [],
+  "competition_sources": []
+}

@@ -1,0 +1,50 @@
+name: Kaggle 24/7 OSINT Continuous Automation
+
+on:
+  schedule:
+    - cron: '0 */11 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-kaggle-osint-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle
+
+      - name: Configure Kaggle Credentials & Push Kernel
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ -z "$KAGGLE_USERNAME" ] || [ -z "$KAGGLE_KEY" ]; then
+            echo "❌ ERREUR: Le secret KAGGLE_USERNAME ou KAGGLE_KEY est vide dans GitHub Settings!"
+            exit 1
+          fi
+
+          mkdir -p ~/.kaggle
+          CLEAN_USER=$(echo "$KAGGLE_USERNAME" | tr -d '\r\n ')
+          CLEAN_KEY=$(echo "$KAGGLE_KEY" | tr -d '\r\n ')
+
+          printf "%s" "$CLEAN_KEY" > ~/.kaggle/access_token
+          printf '{"username":"%s","key":"%s"}' "$CLEAN_USER" "$CLEAN_KEY" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/access_token ~/.kaggle/kaggle.json
+
+          export KAGGLE_API_TOKEN="$CLEAN_KEY"
+          export KAGGLE_USERNAME="$CLEAN_USER"
+          export KAGGLE_KEY="$CLEAN_KEY"
+          export GITHUB_REPOSITORY="${{ github.repository }}"
+
+          python backend/app/cloud_sync/setup_kaggle_metadata.py
+
+          echo "Relance du Kernel Kaggle GPU OSINT Agent 24/7..."
+          kaggle kernels push -p ./kaggle_runtime
