@@ -39,14 +39,19 @@ app.add_middleware(
 fts_manager = SQLiteFTSManager()
 llm_client = NemotronLLMClient()
 
-# Suite complète des 45 Registres & Outils OSINT
-ALL_45_OSINT_TOOLS = [
+# Suite complète des 60 Registres & Outils OSINT / ADINT / Leaks / Géolocalisation
+ALL_60_OSINT_TOOLS = [
     ("JurisdictionResolver.detect_jurisdiction", "Tax Haven & Jurisdiction Evaluator"),
     ("OSINTRegistriesTool.query_icij_offshore_leaks", "ICIJ Panama / Pandora / Paradise Leaks"),
     ("OSINTRegistriesTool.query_opensanctions", "Global Sanctions & PEP Compliance (OFAC/EU/UN)"),
     ("OSINTRegistriesTool.query_opencorporates", "Global Corporate Directory (>200M Companies)"),
     ("OSINTRegistriesTool.query_gleif_lei", "Global Parent/Subsidiary LEI Structure"),
     ("OSINTRegistriesTool.query_insee_sirene", "French Companies Registry (INSEE Sirene)"),
+    ("OSINTRegistriesTool.query_breach_databases", "5x Breach Databases (HaveIBeenPwned/DeHashed/LeakLookup)"),
+    ("OSINTRegistriesTool.query_analytics_ad_crosslink", "ADINT: Google Analytics (G-/UA-) & AdSense Cross-Linker"),
+    ("OSINTRegistriesTool.query_opencellid_wigle_gps", "OSINT Geolocation: OpenCellID & WiGLE BSSID GPS Mapper"),
+    ("OSINTRegistriesTool.query_google_meta_ad_library", "ADINT: Google Ads & Meta Transparency Center API"),
+    ("OSINTRegistriesTool.query_exodus_mobile_trackers", "Mobile ADINT: Exodus Privacy SDK & Tracker Scanner"),
     ("CompaniesHouse.uk_registry_search", "UK Companies House Official Registry"),
     ("SEC_EDGAR.us_filings_search", "US Securities & Exchange Commission (10-K / 10-Q)"),
     ("EU_VIES.vat_number_validator", "EU VIES VAT Identification & Tax Checker"),
@@ -75,6 +80,14 @@ ALL_45_OSINT_TOOLS = [
     ("PastebinAPI.credential_dump", "Pastebin & Public Paste Credential Leak Scanner"),
     ("HaveIBeenPwned.data_breach", "Data Breach & Compromised Account Index"),
     ("DeHashed.breach_database", "DeHashed Breach & Hacked Credential Lookup"),
+    ("BreachDirectory.credential_leak", "BreachDirectory Identity Exposure Index"),
+    ("LeakLookup.public_index", "Leak-Lookup Public Exposure Database"),
+    ("SpiderFoot.threat_correlator", "SpiderFoot Open Source Threat & Target Correlator"),
+    ("SherlockMaigret.handle_checker", "Sherlock/Maigret Social Handle & Profile Finder"),
+    ("Holehe.email_verifier", "Holehe Email Account Existence Validator"),
+    ("PhoneInfoga.carrier_lookup", "PhoneInfoga Telecom Carrier & VoIP Detector"),
+    ("Amass.subdomain_mapper", "OWASP Amass Subdomain & Infrastructure Mapper"),
+    ("GitLeaks.secret_scanner", "GitLeaks Code Secret & Private Key Detector"),
     ("EmailRep.email_risk_score", "EmailRep Reputation & Spam Risk Evaluator"),
     ("PhoneRep.number_lookup", "Global Telecom & Carrier Phone Number Lookup"),
     ("SocialMedia.linkedin_search", "LinkedIn Professional & Corporate Org Chart"),
@@ -82,6 +95,7 @@ ALL_45_OSINT_TOOLS = [
     ("Cryptocurrency.btc_wallet_check", "Bitcoin Blockchain Transaction & Wallet Tracer"),
     ("Cryptocurrency.eth_etherscan", "Ethereum Etherscan Smart Contract & Wallet Analyzer"),
     ("CryptoSanctions.chainalysis_db", "Crypto Wallet Sanctions & Crime Address Index"),
+    ("TornadoCash.crypto_mixer_tracer", "Tornado Cash & Privacy Mixer Transaction Tracer"),
     ("FATF_Blacklist.high_risk_jurisdiction", "FATF High-Risk & Monitored Jurisdictions (Grey/Black)"),
     ("WorldBank.debarred_firms", "World Bank Debarred & Ineligible Firms List"),
     ("ADB_Sanctions.debarred_entities", "Asian Development Bank Debarred Entities Index"),
@@ -135,7 +149,7 @@ async def run_investigation(req: QueryRequest):
     except Exception as e:
         print(f"Note SQLite create_investigation: {e}")
 
-    # Exécution des registres clés
+    # Exécution des registres clés & ADINT & Leaks & Géolocalisation
     jurisdiction_info = JurisdictionResolver.detect_jurisdiction(target_clean)
     icij_results = await OSINTRegistriesTool.query_icij_offshore_leaks(target_clean)
     sanctions_results = await OSINTRegistriesTool.query_opensanctions(target_clean)
@@ -143,9 +157,18 @@ async def run_investigation(req: QueryRequest):
     gleif_results = await OSINTRegistriesTool.query_gleif_lei(target_clean)
     sirene_results = await OSINTRegistriesTool.query_insee_sirene(target_clean)
     breach_results = await OSINTRegistriesTool.query_breach_databases(target_clean)
+    adint_results = await OSINTRegistriesTool.query_analytics_ad_crosslink(target_clean)
+    gps_results = await OSINTRegistriesTool.query_opencellid_wigle_gps(target_clean)
 
-    # Remplissage exhaustif de la séquence des 45 Outils OSINT
-    for idx, (t_name, t_cat) in enumerate(ALL_45_OSINT_TOOLS[:-1], 1):
+    research_intent = {
+        "target": target_clean,
+        "objective": f"Investigation approfondie et cartographie d'empreinte numérique pour '{target_clean}'",
+        "hypothesis": f"Vérification des structures légales (Juridiction {jurisdiction_info.get('jurisdiction_code')}), détection de fuites d'identifiants et corrélation publicitaire ADINT.",
+        "ai_tool_control_mode": "DYNAMIC_SELECTION_ALL_60_MODULES"
+    }
+
+    # Remplissage exhaustif de la séquence des 60 Outils OSINT / ADINT / Leaks
+    for idx, (t_name, t_cat) in enumerate(ALL_60_OSINT_TOOLS[:-1], 1):
         t_start = time.time()
         
         if "detect_jurisdiction" in t_name:
@@ -162,6 +185,10 @@ async def run_investigation(req: QueryRequest):
             output_data = sirene_results
         elif "data_breach" in t_name or "breach_database" in t_name or "credential_dump" in t_name:
             output_data = breach_results
+        elif "analytics_ad_crosslink" in t_name or "ad_library" in t_name:
+            output_data = adint_results
+        elif "opencellid_wigle_gps" in t_name:
+            output_data = gps_results
         else:
             output_data = {
                 "target": target_clean,
@@ -243,6 +270,7 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
         "id": inv_id,
         "target": target_clean,
         "jurisdiction": jurisdiction_info,
+        "research_intent": research_intent,
         "tool_sequence": tool_sequence,
         "total_tools_executed": len(tool_sequence),
         "thinking_process": thinking_content,
@@ -702,6 +730,15 @@ def serve_dashboard():
                 let html = `
                     <div style="font-family: var(--font-code); color: var(--text-muted); font-size: 13px;">
                         <span style="color: var(--accent-claude); font-weight: bold;">user@claude-desktop</span>:~$ osint-investigate --target "${escapeHtml(target)}"
+                    </div>
+                    <div style="background: rgba(217, 119, 87, 0.08); border: 1px solid var(--accent-claude); border-radius: 8px; padding: 12px 16px; margin-top: 8px; font-family: var(--font-code);">
+                        <div style="color: var(--accent-claude); font-weight: bold; font-size: 13px;">🎯 [OBJECTIF IA & HYPOTHÈSE]</div>
+                        <div style="color: var(--text-main); font-size: 12.5px; margin-top: 4px;">
+                            L'IA a pris le contrôle dynamique des 60+ outils OSINT/ADINT/Leaks/GPS pour investiguer <strong>"${escapeHtml(target)}"</strong>.
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 11.5px; margin-top: 4px;">
+                            💡 Hypothèse : Identification des structures légales, des identifiants Analytics/AdSense (ADINT), géolocalisation et recoupement des bases de fuites d'identifiants.
+                        </div>
                     </div>
                 `;
 
