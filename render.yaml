@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: osint-openclaw-server
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: LLM_API_BASE
+        value: "" # L'URL sera injectée dynamiquement par le notebook Kaggle
+      - key: LLM_URL_SECRET
+        generateValue: true # Clé secrète de validation générée automatiquement pour sécuriser le webhook
+      - key: NODE_ENV
+        value: production

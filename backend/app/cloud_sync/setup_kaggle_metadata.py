@@ -38,6 +38,16 @@ def setup_metadata():
             content = content.replace("https://github.com/whbky6vqjb-coder/osint.git", public_git_url)
             print(f"Notebook mis à jour avec l'URL publique Git : {public_git_url}")
 
+        # Injection des secrets de Render pour le webhook dynamique
+        render_url = os.environ.get("RENDER_URL", "").strip()
+        llm_secret = os.environ.get("LLM_URL_SECRET", "").strip()
+        if render_url:
+            content = content.replace("https://osint-app.onrender.com", render_url)
+            print(f"Notebook configuré avec l'URL Render : {render_url}")
+        if llm_secret:
+            content = content.replace("default_secret", llm_secret)
+            print("Notebook configuré avec la clé secrète LLM_URL_SECRET.")
+
         with open(notebook_path, "w", encoding="utf-8") as f:
             f.write(content)
 

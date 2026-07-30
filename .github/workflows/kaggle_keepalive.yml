@@ -26,6 +26,8 @@ jobs:
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RENDER_URL: ${{ secrets.RENDER_URL }}
+          LLM_URL_SECRET: ${{ secrets.LLM_URL_SECRET }}
         run: |
           if [ -z "$KAGGLE_USERNAME" ] || [ -z "$KAGGLE_KEY" ]; then
             echo "❌ ERREUR: Le secret KAGGLE_USERNAME ou KAGGLE_KEY est vide dans GitHub Settings!"
@@ -44,6 +46,8 @@ jobs:
           export KAGGLE_USERNAME="$CLEAN_USER"
           export KAGGLE_KEY="$CLEAN_KEY"
           export GITHUB_REPOSITORY="${{ github.repository }}"
+          export RENDER_URL="${{ secrets.RENDER_URL }}"
+          export LLM_URL_SECRET="${{ secrets.LLM_URL_SECRET }}"
 
           python backend/app/cloud_sync/setup_kaggle_metadata.py
 

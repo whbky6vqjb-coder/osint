@@ -1,0 +1,29 @@
+{
+  "id": "osint-tools",
+  "name": "OSINT & Legal Forensics",
+  "version": "1.0.0",
+  "description": "60+ OSINT/ADINT/Leaks tools + Forensic Engine with SHA-256 evidence validation",
+  "entry": "./src/index.ts",
+  "tools": [
+    {
+      "name": "opencorporates_search",
+      "description": "Recherche une entreprise dans OpenCorporates"
+    },
+    {
+      "name": "icij_offshore_leaks",
+      "description": "Recherche des entités offshore et paradis fiscaux"
+    },
+    {
+      "name": "open_sanctions_check",
+      "description": "Vérifie si une entité est sous sanctions internationales"
+    },
+    {
+      "name": "insee_sirene_lookup",
+      "description": "Recherche d'entreprises françaises via la base SIRENE"
+    },
+    {
+      "name": "breach_check",
+      "description": "Cherche des fuites de données d'identifiants liées à un email ou domaine"
+    }
+  ]
+}
