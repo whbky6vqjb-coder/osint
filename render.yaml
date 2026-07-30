@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: osint-openclaw-server
+    name: osint-hybrid-server
     env: docker
     dockerfilePath: Dockerfile
     plan: free

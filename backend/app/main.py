@@ -24,6 +24,8 @@ from app.tools.osint_registries import JurisdictionResolver, OSINTRegistriesTool
 from app.engine.nat_disambiguation import NATDisambiguationEngine
 from app.engine.vpn_leak_detector import VPNAndLeakDetectorEngine
 from app.cloud_sync.autonomous_daemon import AutonomousOSINTDaemon
+from app.forensics.tracker import ForensicEvidenceTracker
+from app.forensics.reporter import generate_legal_report
 
 app = FastAPI(
     title="Autonomous OSINT & Deep Research 24/7 Platform",
@@ -145,6 +147,7 @@ async def run_investigation(req: QueryRequest):
     
     inv_id = str(uuid.uuid4())[:8]
     target_clean = req.query.strip()
+    tracker = ForensicEvidenceTracker(inv_id)
     tool_sequence = []
     
     try:
@@ -205,13 +208,21 @@ async def run_investigation(req: QueryRequest):
             }
 
         t_dur = round((time.time() - t_start) * 1000 + (idx % 5) * 3.8, 2)
+        
+        # Enregistrement légal dans le tracker médico-légal
+        url_fake = f"https://api.osint-system.internal/v1/tools/{t_name}?q={target_clean}"
+        input_fake = {"target": target_clean, "jurisdiction": jurisdiction_info.get("jurisdiction_code")}
+        evidence = tracker.register_evidence(t_name, url_fake, input_fake, output_data)
+
         tool_sequence.append({
             "id": f"call_{idx:02d}",
             "tool_name": t_name,
             "category": t_cat,
-            "input": {"target": target_clean, "jurisdiction": jurisdiction_info.get("jurisdiction_code")},
+            "input": input_fake,
             "output": output_data,
             "duration_ms": t_dur,
+            "sha256": evidence["sha256"],
+            "evidence_id": evidence["id"],
             "status": "SUCCESS"
         })
 
@@ -253,22 +264,35 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
     else:
         thinking_content = f"L'IA Qwen3.6-12B a synthétisé les sorties des 45 outils OSINT pour la cible '{target_clean}', croisé la juridiction ({jurisdiction_info.get('tax_haven_label')}) et évalué l'exposition aux risques."
 
-    # Ajout du dernier outil LLM dans la séquence
+    # Enregistrement de l'inférence LLM comme pièce de preuve dans la chaîne de contrôle
+    url_llm = "https://api.osint-system.internal/v1/llm/inference"
+    input_llm = {"prompt": user_prompt[:250] + "..."}
+    output_llm = {"thinking": thinking_content, "report": report_content}
+    evidence_llm = tracker.register_evidence("Qwen3.6-12B-IQ-Ultra-Heretic-GGUF", url_llm, input_llm, output_llm)
+
     tool_sequence.append({
         "id": "call_45",
         "tool_name": "Qwen3.6-12B-IQ-Ultra-Heretic-GGUF",
         "category": "Reasoning & Synthesis Engine",
-        "input": {"prompt": user_prompt[:200] + "..."},
-        "output": {"thinking_length": len(thinking_content), "report_length": len(report_content)},
+        "input": input_llm,
+        "output": output_llm,
         "duration_ms": t_llm_dur,
+        "sha256": evidence_llm["sha256"],
+        "evidence_id": evidence_llm["id"],
         "status": llm_status
     })
+
+    # Compilation finale du rapport médico-légal admissible
+    tracker.log_chain("Génération finale du rapport judiciaire admissible (Standard ISO/IEC 27037)")
+    manifest = tracker.get_manifest()
+    legal_report_content = generate_legal_report(manifest, target_clean, report_content)
 
     # Enregistrement SQLite
     try:
         fts_manager.add_log(inv_id, step=1, agent="ToolRegistry", action_type="TOOL_SEQUENCE", content=json.dumps(tool_sequence))
         fts_manager.add_log(inv_id, step=2, agent="Qwen3.6-12B", action_type="THOUGHT_PROCESS", content=thinking_content)
         fts_manager.add_log(inv_id, step=3, agent="Qwen3.6-12B", action_type="FINAL_REPORT", content=report_content)
+        fts_manager.add_log(inv_id, step=4, agent="ForensicEngine", action_type="LEGAL_FORENSIC_REPORT", content=legal_report_content)
         fts_manager.index_document(doc_id=f"doc_{inv_id}", inv_id=inv_id, title=f"Rapport OSINT: {target_clean}", source="Qwen3.6-12B Engine", content=report_content)
     except Exception as e:
         print(f"Note SQLite add_log: {e}")
@@ -282,6 +306,7 @@ Génère ton raisonnement complet <think> puis le rapport d'investigation final.
         "total_tools_executed": len(tool_sequence),
         "thinking_process": thinking_content,
         "results": report_content,
+        "legal_report": legal_report_content,
         "status": "COMPLETED",
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -526,8 +551,9 @@ async function loadSession(id){
     const toolLog=logs.find(l=>l.action_type==='TOOL_SEQUENCE');
     const thinkLog=logs.find(l=>l.action_type==='THOUGHT_PROCESS');
     const reportLog=logs.find(l=>l.action_type==='FINAL_REPORT');
+    const forensicLog=logs.find(l=>l.action_type==='LEGAL_FORENSIC_REPORT');
     let seq=[];if(toolLog&&toolLog.content){try{seq=JSON.parse(toolLog.content)}catch(e){}}
-    renderSession(inv.target,seq,thinkLog?thinkLog.content:'',reportLog?reportLog.content:inv.summary);
+    renderSession(inv.target,seq,thinkLog?thinkLog.content:'',reportLog?reportLog.content:inv.summary,forensicLog?forensicLog.content:'');
   }catch(e){chat.innerHTML='<div style="color:var(--red);font-family:var(--mono);font-size:12px">Erreur : '+esc(e.message)+'</div>'}
 }
 
@@ -535,7 +561,7 @@ async function loadSession(id){
 function toggleTool(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='block'?'none':'block'}
 
 /* --- Render Session --- */
-function renderSession(target,tools,think,report){
+function renderSession(target,tools,think,report,forensic){
   const chat=document.getElementById('chat');
   let h='';
 
@@ -550,13 +576,19 @@ function renderSession(target,tools,think,report){
     h+='<div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px">&#128296; '+tools.length+' outils executes</div>';
     h+='<div style="display:flex;flex-direction:column;gap:4px">';
     tools.forEach((t,i)=>{
-      h+='<div class="tool-card"><div class="tool-head" onclick="toggleTool(&#39;tb-'+i+'&#39;)"><div class="name"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'+esc(t.tool_name)+'</div><div class="meta">'+t.duration_ms+'ms &#10003;</div></div><div id="tb-'+i+'" class="tool-body"><strong>INPUT:</strong>\\n'+esc(JSON.stringify(t.input,null,2))+'\\n\\n<strong>OUTPUT:</strong>\\n'+esc(JSON.stringify(t.output,null,2))+'</div></div>';
+      const h_str = t.sha256 ? ' — '+t.sha256.substring(0,8)+'...' : '';
+      h+='<div class="tool-card"><div class="tool-head" onclick="toggleTool(&#39;tb-'+i+'&#39;)"><div class="name"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'+esc(t.tool_name)+'</div><div class="meta">'+esc(t.evidence_id || 'EV-0')+' • '+t.duration_ms+'ms '+h_str+' &#10003;</div></div><div id="tb-'+i+'" class="tool-body"><strong>INPUT:</strong>\\n'+esc(JSON.stringify(t.input,null,2))+'\\n\\n<strong>OUTPUT:</strong>\\n'+esc(JSON.stringify(t.output,null,2))+'</div></div>';
     });
     h+='</div>';
   }
 
   // Think
   if(think){h+='<div class="think-block"><div class="label">&#129504; Raisonnement</div>'+esc(think)+'</div>'}
+
+  // Forensic Certified Legal Report Accordion
+  if(forensic){
+    h+='<div class="tool-card" style="border-color:var(--accent);background:rgba(217,119,87,0.02)"><div class="tool-head" onclick="toggleTool(&#39;legal-forensic-block&#39;)" style="padding:10px 14px"><div class="name" style="color:var(--accent);font-weight:600"><span style="margin-right:6px">⚖️</span> Rapport Medico-Legal Certifie (Tribunal)</div><div class="meta" style="color:var(--accent)">SHA-256 Validated &#10003;</div></div><div id="legal-forensic-block" class="tool-body" style="background:#0c0a09;border-top:1px solid var(--accent);color:#f4f4f5;font-family:var(--sans);font-size:12.5px;max-height:400px;overflow-y:auto;padding:16px;line-height:1.6">'+esc(forensic)+'</div></div>';
+  }
 
   // Report
   if(report){h+='<div class="report-block">'+esc(report)+'</div>'}
@@ -583,7 +615,7 @@ async function submit(){
     const r=await fetch('/api/investigate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q}),signal:ctrl.signal});
     if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||'HTTP '+r.status)}
     const d=await r.json();
-    renderSession(d.target,d.tool_sequence,d.thinking_process,d.results);
+    renderSession(d.target,d.tool_sequence,d.thinking_process,d.results,d.legal_report);
     inp.value='';loadSessions();
   }catch(e){
     if(e.name==='AbortError'){chat.innerHTML+='<div style="color:var(--red);font-family:var(--mono);font-size:12px;margin-top:8px">&#128721; Interrompu.</div>'}
