@@ -42,7 +42,7 @@ def publish_to_github(url, repo="whbky6vqjb-coder/osint", token=None):
             print("🔄 Tentative de mise à jour GitHub via Git CLI...")
             subprocess.run(["git", "config", "user.name", "Kaggle-Bot"], check=False)
             subprocess.run(["git", "config", "user.email", "kaggle-bot@osint.internal"], check=False)
-            subprocess.run(["git", "add", "storage/llm_url.txt"], check=False)
+            subprocess.run(["git", "add", "-f", "storage/llm_url.txt"], check=False)
             subprocess.run(["git", "commit", "-m", f"chore: update dynamic Cloudflare LLM URL [{url}]"], check=False)
             res = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
             if res.returncode == 0:

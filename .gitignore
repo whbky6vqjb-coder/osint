@@ -2,7 +2,8 @@ node_modules/
 __pycache__/
 *.pyc
 .env
-storage/
+storage/*
+!storage/llm_url.txt
 *.sqlite
 dist/
 .DS_Store
