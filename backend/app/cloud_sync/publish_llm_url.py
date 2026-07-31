@@ -2,6 +2,7 @@ import os
 import re
 import time
 import json
+import subprocess
 import urllib.request
 import urllib.parse
 
@@ -27,13 +28,37 @@ def find_cloudflare_url(log_file="/tmp/cloudflared.log", max_wait=30):
 
 def publish_to_github(url, repo="whbky6vqjb-coder/osint", token=None):
     """
-    Met à jour le fichier storage/llm_url.txt sur le dépôt GitHub via l'API.
+    Met à jour le fichier storage/llm_url.txt sur le dépôt GitHub.
+    Tente via Git CLI d'abord, puis via l'API REST.
     """
+    url_v1 = f"{url}/v1\n"
+    os.makedirs("storage", exist_ok=True)
+    with open("storage/llm_url.txt", "w", encoding="utf-8") as f:
+        f.write(url_v1)
+
+    # 1. Tentative via Git CLI si nous sommes dans le repo cloné sur Kaggle
+    try:
+        if os.path.exists(".git"):
+            print("🔄 Tentative de mise à jour GitHub via Git CLI...")
+            subprocess.run(["git", "config", "user.name", "Kaggle-Bot"], check=False)
+            subprocess.run(["git", "config", "user.email", "kaggle-bot@osint.internal"], check=False)
+            subprocess.run(["git", "add", "storage/llm_url.txt"], check=False)
+            subprocess.run(["git", "commit", "-m", f"chore: update dynamic Cloudflare LLM URL [{url}]"], check=False)
+            res = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
+            if res.returncode == 0:
+                print(f"✅ URL LLM publiée avec succès sur GitHub via Git CLI [{url}]")
+                return True
+            else:
+                print(f"ℹ️ Push Git CLI non abouti ({res.stderr.strip()}), essai par API REST...")
+    except Exception as e:
+        print(f"⚠️ Git CLI non disponible: {e}")
+
+    # 2. Fallback via l'API REST GitHub
     if not token:
         token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_PAT")
     
     if not token:
-        print("⚠️ Aucun token GitHub (GITHUB_TOKEN/GH_PAT) trouvé. Ignoré.")
+        print("⚠️ Aucun token REST GitHub (GITHUB_TOKEN/GH_PAT) trouvé.")
         return False
 
     api_url = f"https://api.github.com/repos/{repo}/contents/storage/llm_url.txt"
@@ -43,7 +68,6 @@ def publish_to_github(url, repo="whbky6vqjb-coder/osint", token=None):
         "User-Agent": "Kaggle-Publisher/1.0"
     }
 
-    # 1. Obtenir le SHA actuel du fichier s'il existe
     sha = None
     try:
         req = urllib.request.Request(api_url, headers=headers)
@@ -54,9 +78,8 @@ def publish_to_github(url, repo="whbky6vqjb-coder/osint", token=None):
     except Exception:
         pass
 
-    # 2. Encoder le contenu en Base64
     import base64
-    content_b64 = base64.b64encode(f"{url}/v1\n".encode("utf-8")).decode("utf-8")
+    content_b64 = base64.b64encode(url_v1.encode("utf-8")).decode("utf-8")
 
     payload = {
         "message": f"chore: update dynamic Cloudflare LLM URL [{url}]",
@@ -71,10 +94,10 @@ def publish_to_github(url, repo="whbky6vqjb-coder/osint", token=None):
         req = urllib.request.Request(api_url, data=data_bytes, headers=headers, method="PUT")
         with urllib.request.urlopen(req) as resp:
             if resp.status in (200, 201):
-                print(f"✅ URL LLM publiée avec succès sur GitHub ({repo}/storage/llm_url.txt)")
+                print(f"✅ URL LLM publiée avec succès sur GitHub via API ({repo}/storage/llm_url.txt)")
                 return True
     except Exception as e:
-        print(f"❌ Erreur lors de la publication sur GitHub: {e}")
+        print(f"❌ Erreur lors de la publication REST sur GitHub: {e}")
     
     return False
 
@@ -105,7 +128,7 @@ def send_render_webhook(url, render_url=None, secret=None):
                 print(f"✅ Webhook envoyé avec succès à Render ({endpoint})")
                 return True
     except Exception as e:
-        print(f"⚠️ Webhook Render échoué (normal si le serveur démarre encore): {e}")
+        print(f"⚠️ Webhook Render ignoré: {e}")
 
     return False
 
@@ -115,11 +138,6 @@ if __name__ == "__main__":
     
     if llm_url:
         print(f"🌐 URL Cloudflare détectée : {llm_url}")
-        # Écrire dans le fichier local du repo si cloné
-        os.makedirs("storage", exist_ok=True)
-        with open("storage/llm_url.txt", "w", encoding="utf-8") as f:
-            f.write(f"{llm_url}/v1\n")
-            
         publish_to_github(llm_url)
         send_render_webhook(llm_url)
     else:
